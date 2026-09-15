@@ -201,12 +201,54 @@
     opacity: 0.4;
     cursor: not-allowed;
   }
+
+  .uploader {
+    max-width: 640px;
+    margin-bottom: 28px;
+  }
+  .uploader h2 {
+    margin: 0;
+    font-size: 1.05rem;
+  }
+  .uploader input[type="file"] {
+    font-size: 0.85rem;
+  }
+  .checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .checkbox-row input {
+    width: auto;
+  }
 </style>
 </head>
 <body>
 
 <h1>Graabein Skjegg – Innleggskø</h1>
 <p class="sub">Se over utkast, rediger tekst, velg format (innlegg/story/reel) og tidspunkt, og godkjenn. Facebook- og Instagram-varianten vises side ved side.</p>
+
+<div class="uploader card">
+  <div class="card-body">
+    <h2>Nytt innlegg</h2>
+    <p class="hint">Velg bilde eller video fra din egen enhet – den lastes rett opp her, du trenger ikke gå via Firebase. Det opprettes ett utkast til Facebook og ett til Instagram (som «Innlegg»); du velger format og godkjenner som vanlig nedenfor.</p>
+
+    <input type="file" id="mediaInput" accept="image/*,video/*" />
+
+    <label class="checkbox-row">
+      <input type="checkbox" id="sammeTekst" checked />
+      Bruk samme tekst for Facebook og Instagram
+    </label>
+
+    <textarea id="fbTekst" placeholder="Tekst til Facebook"></textarea>
+    <textarea id="igTekst" placeholder="Tekst til Instagram" hidden></textarea>
+
+    <button class="btn-add" id="opprettBtn" style="width:100%;">Last opp og opprett utkast</button>
+    <div class="status-line" id="opplastingStatus"></div>
+  </div>
+</div>
 
 <div class="tabs">
   <div class="tab active" data-tab="utkast">Til godkjenning</div>
@@ -233,9 +275,14 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 <script>
   firebase.initializeApp(firebaseConfig);
   const db = firebase.firestore();
+  const storage = firebase.storage();
+
+  const MAKS_BILDE_BYTES = 15 * 1024 * 1024;
+  const MAKS_VIDEO_BYTES = 300 * 1024 * 1024;
 
   let currentTab = "utkast";
   let unsubscribe = null;
@@ -502,6 +549,98 @@
         });
       });
   }
+
+  // ---------------------------------------------------------------------
+  // Nytt innlegg: last opp bilde/video direkte fra denne siden (uten å
+  // gå via Firebase Console), og opprett Facebook- og Instagram-utkast.
+  // ---------------------------------------------------------------------
+  const mediaInput = document.getElementById("mediaInput");
+  const sammeTekstCb = document.getElementById("sammeTekst");
+  const fbTekstEl = document.getElementById("fbTekst");
+  const igTekstEl = document.getElementById("igTekst");
+  const opprettBtn = document.getElementById("opprettBtn");
+  const opplastingStatus = document.getElementById("opplastingStatus");
+
+  sammeTekstCb.addEventListener("change", () => {
+    igTekstEl.hidden = sammeTekstCb.checked;
+  });
+
+  function settOpplastingStatus(tekst, erFeil) {
+    opplastingStatus.textContent = tekst;
+    opplastingStatus.classList.toggle("error", !!erFeil);
+  }
+
+  opprettBtn.addEventListener("click", async () => {
+    const file = mediaInput.files[0];
+    if (!file) {
+      settOpplastingStatus("Velg en fil først.", true);
+      return;
+    }
+
+    const erVideo = file.type.startsWith("video/");
+    const erBilde = file.type.startsWith("image/");
+    if (!erVideo && !erBilde) {
+      settOpplastingStatus("Filen må være et bilde eller en video.", true);
+      return;
+    }
+
+    const maksBytes = erVideo ? MAKS_VIDEO_BYTES : MAKS_BILDE_BYTES;
+    if (file.size > maksBytes) {
+      const maksMb = Math.round(maksBytes / (1024 * 1024));
+      settOpplastingStatus(`Filen er for stor (maks ${maksMb} MB for ${erVideo ? "video" : "bilde"}).`, true);
+      return;
+    }
+
+    const fbTekst = fbTekstEl.value;
+    const igTekst = sammeTekstCb.checked ? fbTekst : igTekstEl.value;
+
+    const mappe = erVideo ? "innlegg-videoer" : "innlegg-bilder";
+    const trygtNavn = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+    const path = `${mappe}/${Date.now()}-${trygtNavn}`;
+
+    opprettBtn.disabled = true;
+    settOpplastingStatus("Laster opp … 0%", false);
+
+    try {
+      const ref = storage.ref(path);
+      const oppgave = ref.put(file, { contentType: file.type });
+
+      oppgave.on("state_changed", (snap) => {
+        const prosent = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
+        settOpplastingStatus(`Laster opp … ${prosent}%`, false);
+      });
+
+      await oppgave;
+      const mediaUrl = await ref.getDownloadURL();
+
+      const mediaType = erVideo ? "video" : "image";
+      const gruppeId = db.collection("innlegg").doc().id;
+      const opprettet = firebase.firestore.FieldValue.serverTimestamp();
+
+      await db.collection("innlegg").add({
+        mediaUrl, mediaType, tekst: fbTekst, status: "utkast",
+        plattform: "facebook", type: "feed", gruppeId, opprettet,
+      });
+      await db.collection("innlegg").add({
+        mediaUrl, mediaType, tekst: igTekst, status: "utkast",
+        plattform: "instagram", type: "feed", gruppeId, opprettet,
+      });
+
+      settOpplastingStatus("Utkast opprettet! Se «Til godkjenning» under.", false);
+      mediaInput.value = "";
+      fbTekstEl.value = "";
+      igTekstEl.value = "";
+
+      if (currentTab !== "utkast") {
+        document.querySelector('.tab[data-tab="utkast"]').click();
+      }
+    } catch (err) {
+      console.error(err);
+      settOpplastingStatus("Noe gikk galt: " + err.message, true);
+    } finally {
+      opprettBtn.disabled = false;
+    }
+  });
 
   lyttPaKollen();
 </script>
