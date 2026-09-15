@@ -60,7 +60,7 @@
     display: flex;
     flex-direction: column;
     gap: 24px;
-    max-width: 1100px;
+    max-width: 1200px;
   }
   .gruppe {
     display: flex;
@@ -75,14 +75,14 @@
     display: flex;
     flex-direction: column;
     flex: 1 1 300px;
-    max-width: 420px;
+    max-width: 380px;
   }
-  .card img {
+  .card img, .card video {
     width: 100%;
     aspect-ratio: 1;
     object-fit: cover;
     display: block;
-    background: #eee;
+    background: #000;
   }
   .card-body {
     padding: 14px;
@@ -99,6 +99,15 @@
     padding: 8px;
     border: 1px solid var(--line);
     border-radius: 8px;
+  }
+  input[type="text"], input[type="url"], select {
+    width: 100%;
+    padding: 7px 8px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-family: inherit;
+    background: white;
   }
   .row {
     display: flex;
@@ -133,11 +142,17 @@
   .btn-retry { background: var(--warn); color: white; }
   .btn-delete { background: transparent; color: var(--muted); border: 1px solid var(--line); flex: 0 0 auto; }
   .btn-delete:hover { color: var(--bad); border-color: var(--bad); }
+  .btn-add { background: var(--accent); color: var(--accent-ink); }
   .status-line {
     font-size: 0.8rem;
     color: var(--muted);
   }
   .status-line.error { color: var(--bad); }
+  .hint {
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-style: italic;
+  }
   .empty {
     color: var(--muted);
     font-size: 0.9rem;
@@ -159,12 +174,42 @@
   }
   .badge.plattform-facebook { background: var(--fb); color: white; }
   .badge.plattform-instagram { background: var(--ig); color: white; }
+  .badge.type { background: #ddd6c8; color: var(--ink); }
+
+  .legg-til-kort {
+    flex: 1 1 220px;
+    max-width: 260px;
+    border: 2px dashed var(--line);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 120px;
+    padding: 16px;
+  }
+  .legg-til-kort button.apne {
+    background: transparent;
+    color: var(--muted);
+    border: none;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+  .legg-til-skjema {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .legg-til-skjema label {
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
 </style>
 </head>
 <body>
 
 <h1>Graabein Skjegg – Innleggskø</h1>
-<p class="sub">Se over utkast, rediger tekst, velg tidspunkt, og godkjenn. Facebook- og Instagram-varianten av samme bilde vises side ved side.</p>
+<p class="sub">Se over utkast, rediger tekst, velg tidspunkt, og godkjenn. Ulike varianter (plattform × innlegg/story/reel) av samme bilde eller video vises side ved side.</p>
 
 <div class="tabs">
   <div class="tab active" data-tab="utkast">Til godkjenning</div>
@@ -220,6 +265,12 @@
     return p || "Ukjent plattform";
   }
 
+  function typeNavn(t) {
+    if (t === "story") return "Story";
+    if (t === "reel") return "Reel";
+    return "Innlegg";
+  }
+
   async function slettInnlegg(id) {
     if (confirm("Slette dette innlegget permanent? Dette kan ikke angres.")) {
       await db.collection("innlegg").doc(id).delete();
@@ -227,13 +278,22 @@
   }
 
   function renderKort(id, data) {
+    const mediaUrl = data.mediaUrl || data.bildeUrl;
+    const mediaType = data.mediaType || "image";
+    const type = data.type || "feed";
+
     const div = document.createElement("div");
     div.className = "card";
 
-    const img = document.createElement("img");
-    img.src = data.bildeUrl;
-    img.alt = "Innleggsbilde";
-    div.appendChild(img);
+    const media = mediaType === "video" ? document.createElement("video") : document.createElement("img");
+    media.src = mediaUrl;
+    if (mediaType === "video") {
+      media.controls = true;
+      media.muted = true;
+    } else {
+      media.alt = "Innleggsbilde";
+    }
+    div.appendChild(media);
 
     const body = document.createElement("div");
     body.className = "card-body";
@@ -248,12 +308,23 @@
     plattformBadge.className = `badge plattform-${data.plattform || "ukjent"}`;
     plattformBadge.textContent = plattformNavn(data.plattform);
     badges.appendChild(plattformBadge);
+    const typeBadge = document.createElement("span");
+    typeBadge.className = "badge type";
+    typeBadge.textContent = typeNavn(type);
+    badges.appendChild(typeBadge);
     body.appendChild(badges);
 
     const textarea = document.createElement("textarea");
     textarea.value = data.tekst || "";
     textarea.disabled = data.status !== "utkast";
     body.appendChild(textarea);
+
+    if (type === "story") {
+      const hint = document.createElement("div");
+      hint.className = "hint";
+      hint.textContent = "Vises ikke på selve Story-en (Meta støtter ikke bildetekst der) – kun til eget notat.";
+      body.appendChild(hint);
+    }
 
     if (data.status === "utkast") {
       const timeInput = document.createElement("input");
@@ -269,6 +340,10 @@
       godkjennBtn.className = "btn-approve";
       godkjennBtn.textContent = "Godkjenn";
       godkjennBtn.onclick = async () => {
+        if (type === "reel" && mediaType !== "video") {
+          alert("Reel krever video. Dette kortet har bare bilde, så det kan ikke godkjennes som Reel.");
+          return;
+        }
         const oppdatering = {
           status: "godkjent",
           tekst: textarea.value,
@@ -339,6 +414,112 @@
     return div;
   }
 
+  /**
+   * "+ Legg til variant"-kort: lar deg opprette en ny plattform/type-
+   * kombinasjon (f.eks. legge en Reel til et bilde-sett, eller legge
+   * Instagram-varianten til noe som til nå bare har Facebook).
+   * Ny variant blir alltid et nytt utkast med samme gruppeId.
+   */
+  function renderLeggTilKort(gruppeId, forslag) {
+    const div = document.createElement("div");
+    div.className = "legg-til-kort";
+
+    const apneBtn = document.createElement("button");
+    apneBtn.className = "apne";
+    apneBtn.textContent = "+ Legg til variant";
+
+    const skjema = document.createElement("div");
+    skjema.className = "legg-til-skjema";
+    skjema.hidden = true;
+
+    const plattformSelect = document.createElement("select");
+    ["facebook", "instagram"].forEach((p) => {
+      const opt = document.createElement("option");
+      opt.value = p;
+      opt.textContent = plattformNavn(p);
+      plattformSelect.appendChild(opt);
+    });
+
+    const typeSelect = document.createElement("select");
+    ["feed", "story", "reel"].forEach((t) => {
+      const opt = document.createElement("option");
+      opt.value = t;
+      opt.textContent = typeNavn(t);
+      typeSelect.appendChild(opt);
+    });
+
+    const mediaTypeSelect = document.createElement("select");
+    [["image", "Bilde"], ["video", "Video"]].forEach(([v, navn]) => {
+      const opt = document.createElement("option");
+      opt.value = v;
+      opt.textContent = navn;
+      mediaTypeSelect.appendChild(opt);
+    });
+    mediaTypeSelect.value = forslag.mediaType || "image";
+
+    typeSelect.addEventListener("change", () => {
+      if (typeSelect.value === "reel") mediaTypeSelect.value = "video";
+    });
+
+    const mediaUrlInput = document.createElement("input");
+    mediaUrlInput.type = "url";
+    mediaUrlInput.value = forslag.mediaUrl || "";
+    mediaUrlInput.placeholder = "URL til bilde/video (Firebase Storage)";
+
+    const tekstInput = document.createElement("textarea");
+    tekstInput.value = forslag.tekst || "";
+    tekstInput.placeholder = "Bildetekst for denne varianten";
+
+    const lagBtn = document.createElement("button");
+    lagBtn.className = "btn-add";
+    lagBtn.textContent = "Opprett utkast";
+    lagBtn.onclick = async () => {
+      if (typeSelect.value === "reel" && mediaTypeSelect.value !== "video") {
+        alert("Reel krever video – velg Video som medietype, eller lim inn en videourl.");
+        return;
+      }
+      if (!mediaUrlInput.value) {
+        alert("Fyll inn en URL til bilde eller video.");
+        return;
+      }
+      await db.collection("innlegg").add({
+        mediaUrl: mediaUrlInput.value,
+        mediaType: mediaTypeSelect.value,
+        tekst: tekstInput.value,
+        status: "utkast",
+        plattform: plattformSelect.value,
+        type: typeSelect.value,
+        gruppeId,
+        opprettet: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+      skjema.hidden = true;
+      apneBtn.hidden = false;
+    };
+
+    [
+      ["Plattform", plattformSelect],
+      ["Type", typeSelect],
+      ["Medietype", mediaTypeSelect],
+      ["Bilde/video-URL", mediaUrlInput],
+      ["Tekst", tekstInput],
+    ].forEach(([navn, felt]) => {
+      const label = document.createElement("label");
+      label.textContent = navn;
+      skjema.appendChild(label);
+      skjema.appendChild(felt);
+    });
+    skjema.appendChild(lagBtn);
+
+    apneBtn.onclick = () => {
+      skjema.hidden = false;
+      apneBtn.hidden = true;
+    };
+
+    div.appendChild(apneBtn);
+    div.appendChild(skjema);
+    return div;
+  }
+
   function lyttPaKollen() {
     if (unsubscribe) unsubscribe();
     const grid = document.getElementById("grid");
@@ -355,8 +536,8 @@
         }
         empty.hidden = true;
 
-        // Grupper Facebook- og Instagram-varianten av samme bilde
-        // sammen (delt gruppeId), slik at de vises side ved side.
+        // Grupper varianter av samme bilde/video (delt gruppeId) sammen,
+        // slik at de vises side ved side.
         const grupper = new Map();
         const rekkefolge = [];
         snap.forEach((doc) => {
@@ -370,11 +551,20 @@
         });
 
         rekkefolge.forEach((nokkel) => {
+          const dokumenter = grupper.get(nokkel);
           const gruppeDiv = document.createElement("div");
           gruppeDiv.className = "gruppe";
-          grupper.get(nokkel).forEach(({ id, data }) => {
+          dokumenter.forEach(({ id, data }) => {
             gruppeDiv.appendChild(renderKort(id, data));
           });
+          const forste = dokumenter[0].data;
+          gruppeDiv.appendChild(
+            renderLeggTilKort(nokkel, {
+              mediaUrl: forste.mediaUrl || forste.bildeUrl,
+              mediaType: forste.mediaType || "image",
+              tekst: "",
+            })
+          );
           grid.appendChild(gruppeDiv);
         });
       });
