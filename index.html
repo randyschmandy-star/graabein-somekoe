@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Graabein Skjegg – Innleggskø</title>
+<style>
+  :root {
+    --bg: #f6f5f2;
+    --card: #ffffff;
+    --ink: #1f1b16;
+    --muted: #6b6259;
+    --line: #e7e2da;
+    --accent: #3f3a2e;
+    --accent-ink: #ffffff;
+    --good: #3a7a4e;
+    --bad: #a3402f;
+    --warn: #b8862f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding: 24px 16px 64px;
+  }
+  h1 {
+    font-size: 1.4rem;
+    margin: 0 0 4px;
+  }
+  .sub {
+    color: var(--muted);
+    margin: 0 0 24px;
+    font-size: 0.9rem;
+  }
+  .tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .tab {
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--card);
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .tab.active {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-color: var(--accent);
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    max-width: 1100px;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .card img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    display: block;
+    background: #eee;
+  }
+  .card-body {
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  textarea {
+    width: 100%;
+    min-height: 70px;
+    resize: vertical;
+    font-family: inherit;
+    font-size: 0.9rem;
+    padding: 8px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+  }
+  .row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    font-size: 0.85rem;
+  }
+  label.chk {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+  }
+  input[type="datetime-local"] {
+    padding: 6px 8px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    flex: 1;
+    min-width: 160px;
+  }
+  .actions {
+    display: flex;
+    gap: 8px;
+  }
+  button {
+    border: none;
+    border-radius: 8px;
+    padding: 9px 14px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    flex: 1;
+  }
+  .btn-approve { background: var(--good); color: white; }
+  .btn-reject { background: transparent; color: var(--bad); border: 1px solid var(--bad); }
+  .btn-retry { background: var(--warn); color: white; }
+  .status-line {
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .status-line.error { color: var(--bad); }
+  .empty {
+    color: var(--muted);
+    font-size: 0.9rem;
+    padding: 40px 0;
+    text-align: center;
+  }
+  .badge {
+    display: inline-block;
+    font-size: 0.72rem;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #eee;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+
+<h1>Graabein Skjegg – Innleggskø</h1>
+<p class="sub">Se over utkast, rediger tekst, velg plattform og tidspunkt, og godkjenn.</p>
+
+<div class="tabs">
+  <div class="tab active" data-tab="utkast">Til godkjenning</div>
+  <div class="tab" data-tab="godkjent">I kø</div>
+  <div class="tab" data-tab="postet">Postet</div>
+  <div class="tab" data-tab="feilet">Feilet</div>
+</div>
+
+<div id="grid" class="grid"></div>
+<div id="empty" class="empty" hidden>Ingenting her akkurat nå.</div>
+
+<!-- ====== TODO: fyll inn din Firebase-konfigurasjon (Prosjektinnstillinger → Dine apper) ====== -->
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyDN1sjsPlIF-cq2JVtu6NLmc_gVeTrOLPw",
+    authDomain: "graabeinsome.firebaseapp.com",
+    projectId: "graabeinsome",
+    storageBucket: "graabeinsome.firebasestorage.app",
+    messagingSenderId: "533801152878",
+    appId: "1:533801152878:web:b44288b4e0eb18542c517f",
+  };
+</script>
+<!-- ============================================================================================ -->
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  let currentTab = "utkast";
+  let unsubscribe = null;
+
+  document.querySelectorAll(".tab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+      tab.classList.add("active");
+      currentTab = tab.dataset.tab;
+      lyttPaKollen();
+    });
+  });
+
+  function formatDatetimeLocal(timestamp) {
+    if (!timestamp) return "";
+    const d = timestamp.toDate();
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  function renderKort(id, data) {
+    const div = document.createElement("div");
+    div.className = "card";
+
+    const img = document.createElement("img");
+    img.src = data.bildeUrl;
+    img.alt = "Innleggsbilde";
+    div.appendChild(img);
+
+    const body = document.createElement("div");
+    body.className = "card-body";
+
+    const badge = document.createElement("span");
+    badge.className = "badge";
+    badge.textContent = data.status;
+    body.appendChild(badge);
+
+    const textarea = document.createElement("textarea");
+    textarea.value = data.tekst || "";
+    textarea.disabled = data.status !== "utkast";
+    body.appendChild(textarea);
+
+    const plattformRow = document.createElement("div");
+    plattformRow.className = "row";
+    ["facebook", "instagram"].forEach((p) => {
+      const label = document.createElement("label");
+      label.className = "chk";
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = (data.plattformer || []).includes(p);
+      cb.disabled = data.status !== "utkast";
+      cb.dataset.plattform = p;
+      label.appendChild(cb);
+      label.append(p === "facebook" ? "Facebook" : "Instagram");
+      plattformRow.appendChild(label);
+    });
+    body.appendChild(plattformRow);
+
+    if (data.status === "utkast") {
+      const timeInput = document.createElement("input");
+      timeInput.type = "datetime-local";
+      timeInput.value = formatDatetimeLocal(data.planlagtTid);
+      timeInput.title = "La stå tomt for å poste så snart som mulig";
+      body.appendChild(timeInput);
+
+      const actions = document.createElement("div");
+      actions.className = "actions";
+
+      const godkjennBtn = document.createElement("button");
+      godkjennBtn.className = "btn-approve";
+      godkjennBtn.textContent = "Godkjenn";
+      godkjennBtn.onclick = async () => {
+        const plattformer = Array.from(plattformRow.querySelectorAll("input:checked")).map(
+          (cb) => cb.dataset.plattform
+        );
+        if (plattformer.length === 0) {
+          alert("Velg minst én plattform.");
+          return;
+        }
+        const oppdatering = {
+          status: "godkjent",
+          tekst: textarea.value,
+          plattformer,
+          planlagtTid: timeInput.value
+            ? firebase.firestore.Timestamp.fromDate(new Date(timeInput.value))
+            : null,
+        };
+        await db.collection("innlegg").doc(id).update(oppdatering);
+      };
+      actions.appendChild(godkjennBtn);
+
+      const avvisBtn = document.createElement("button");
+      avvisBtn.className = "btn-reject";
+      avvisBtn.textContent = "Avvis";
+      avvisBtn.onclick = async () => {
+        if (confirm("Avvise dette utkastet?")) {
+          await db.collection("innlegg").doc(id).update({ status: "avvist" });
+        }
+      };
+      actions.appendChild(avvisBtn);
+
+      body.appendChild(actions);
+    }
+
+    if (data.status === "godkjent") {
+      const info = document.createElement("div");
+      info.className = "status-line";
+      info.textContent = data.planlagtTid
+        ? `Postes ${data.planlagtTid.toDate().toLocaleString("no-NO")}`
+        : "Postes så snart som mulig (innen ~10 min)";
+      body.appendChild(info);
+    }
+
+    if (data.status === "postet") {
+      const info = document.createElement("div");
+      info.className = "status-line";
+      const tid = data.postetTid ? data.postetTid.toDate().toLocaleString("no-NO") : "";
+      info.textContent = `Postet ${tid}`;
+      body.appendChild(info);
+    }
+
+    if (data.status === "feilet") {
+      const info = document.createElement("div");
+      info.className = "status-line error";
+      info.textContent = data.feilmelding || "Ukjent feil";
+      body.appendChild(info);
+
+      const retryBtn = document.createElement("button");
+      retryBtn.className = "btn-retry";
+      retryBtn.textContent = "Prøv igjen";
+      retryBtn.onclick = async () => {
+        await db.collection("innlegg").doc(id).update({ status: "godkjent", feilmelding: null });
+      };
+      body.appendChild(retryBtn);
+    }
+
+    div.appendChild(body);
+    return div;
+  }
+
+  function lyttPaKollen() {
+    if (unsubscribe) unsubscribe();
+    const grid = document.getElementById("grid");
+    const empty = document.getElementById("empty");
+    unsubscribe = db
+      .collection("innlegg")
+      .where("status", "==", currentTab)
+      .orderBy("opprettet", "desc")
+      .onSnapshot((snap) => {
+        grid.innerHTML = "";
+        if (snap.empty) {
+          empty.hidden = false;
+          return;
+        }
+        empty.hidden = true;
+        snap.forEach((doc) => grid.appendChild(renderKort(doc.id, doc.data())));
+      });
+  }
+
+  lyttPaKollen();
+</script>
+</body>
+</html>
