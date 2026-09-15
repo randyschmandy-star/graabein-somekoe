@@ -16,6 +16,8 @@
     --good: #3a7a4e;
     --bad: #a3402f;
     --warn: #b8862f;
+    --fb: #1877f2;
+    --ig: #c13584;
   }
   * { box-sizing: border-box; }
   body {
@@ -55,10 +57,15 @@
     border-color: var(--accent);
   }
   .grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
     max-width: 1100px;
+  }
+  .gruppe {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
   }
   .card {
     background: var(--card);
@@ -67,6 +74,8 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    flex: 1 1 300px;
+    max-width: 420px;
   }
   .card img {
     width: 100%;
@@ -83,7 +92,7 @@
   }
   textarea {
     width: 100%;
-    min-height: 70px;
+    min-height: 90px;
     resize: vertical;
     font-family: inherit;
     font-size: 0.9rem;
@@ -98,12 +107,6 @@
     flex-wrap: wrap;
     font-size: 0.85rem;
   }
-  label.chk {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    cursor: pointer;
-  }
   input[type="datetime-local"] {
     padding: 6px 8px;
     border: 1px solid var(--line);
@@ -115,6 +118,7 @@
   .actions {
     display: flex;
     gap: 8px;
+    flex-wrap: wrap;
   }
   button {
     border: none;
@@ -127,6 +131,8 @@
   .btn-approve { background: var(--good); color: white; }
   .btn-reject { background: transparent; color: var(--bad); border: 1px solid var(--bad); }
   .btn-retry { background: var(--warn); color: white; }
+  .btn-delete { background: transparent; color: var(--muted); border: 1px solid var(--line); flex: 0 0 auto; }
+  .btn-delete:hover { color: var(--bad); border-color: var(--bad); }
   .status-line {
     font-size: 0.8rem;
     color: var(--muted);
@@ -138,6 +144,11 @@
     padding: 40px 0;
     text-align: center;
   }
+  .badges {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
   .badge {
     display: inline-block;
     font-size: 0.72rem;
@@ -146,12 +157,14 @@
     background: #eee;
     color: var(--muted);
   }
+  .badge.plattform-facebook { background: var(--fb); color: white; }
+  .badge.plattform-instagram { background: var(--ig); color: white; }
 </style>
 </head>
 <body>
 
 <h1>Graabein Skjegg – Innleggskø</h1>
-<p class="sub">Se over utkast, rediger tekst, velg plattform og tidspunkt, og godkjenn.</p>
+<p class="sub">Se over utkast, rediger tekst, velg tidspunkt, og godkjenn. Facebook- og Instagram-varianten av samme bilde vises side ved side.</p>
 
 <div class="tabs">
   <div class="tab active" data-tab="utkast">Til godkjenning</div>
@@ -201,6 +214,18 @@
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
 
+  function plattformNavn(p) {
+    if (p === "facebook") return "Facebook";
+    if (p === "instagram") return "Instagram";
+    return p || "Ukjent plattform";
+  }
+
+  async function slettInnlegg(id) {
+    if (confirm("Slette dette innlegget permanent? Dette kan ikke angres.")) {
+      await db.collection("innlegg").doc(id).delete();
+    }
+  }
+
   function renderKort(id, data) {
     const div = document.createElement("div");
     div.className = "card";
@@ -213,31 +238,22 @@
     const body = document.createElement("div");
     body.className = "card-body";
 
-    const badge = document.createElement("span");
-    badge.className = "badge";
-    badge.textContent = data.status;
-    body.appendChild(badge);
+    const badges = document.createElement("div");
+    badges.className = "badges";
+    const statusBadge = document.createElement("span");
+    statusBadge.className = "badge";
+    statusBadge.textContent = data.status;
+    badges.appendChild(statusBadge);
+    const plattformBadge = document.createElement("span");
+    plattformBadge.className = `badge plattform-${data.plattform || "ukjent"}`;
+    plattformBadge.textContent = plattformNavn(data.plattform);
+    badges.appendChild(plattformBadge);
+    body.appendChild(badges);
 
     const textarea = document.createElement("textarea");
     textarea.value = data.tekst || "";
     textarea.disabled = data.status !== "utkast";
     body.appendChild(textarea);
-
-    const plattformRow = document.createElement("div");
-    plattformRow.className = "row";
-    ["facebook", "instagram"].forEach((p) => {
-      const label = document.createElement("label");
-      label.className = "chk";
-      const cb = document.createElement("input");
-      cb.type = "checkbox";
-      cb.checked = (data.plattformer || []).includes(p);
-      cb.disabled = data.status !== "utkast";
-      cb.dataset.plattform = p;
-      label.appendChild(cb);
-      label.append(p === "facebook" ? "Facebook" : "Instagram");
-      plattformRow.appendChild(label);
-    });
-    body.appendChild(plattformRow);
 
     if (data.status === "utkast") {
       const timeInput = document.createElement("input");
@@ -253,17 +269,9 @@
       godkjennBtn.className = "btn-approve";
       godkjennBtn.textContent = "Godkjenn";
       godkjennBtn.onclick = async () => {
-        const plattformer = Array.from(plattformRow.querySelectorAll("input:checked")).map(
-          (cb) => cb.dataset.plattform
-        );
-        if (plattformer.length === 0) {
-          alert("Velg minst én plattform.");
-          return;
-        }
         const oppdatering = {
           status: "godkjent",
           tekst: textarea.value,
-          plattformer,
           planlagtTid: timeInput.value
             ? firebase.firestore.Timestamp.fromDate(new Date(timeInput.value))
             : null,
@@ -317,6 +325,16 @@
       body.appendChild(retryBtn);
     }
 
+    // Slett-knapp: tilgjengelig uansett status.
+    const slettRad = document.createElement("div");
+    slettRad.className = "actions";
+    const slettBtn = document.createElement("button");
+    slettBtn.className = "btn-delete";
+    slettBtn.textContent = "Slett";
+    slettBtn.onclick = () => slettInnlegg(id);
+    slettRad.appendChild(slettBtn);
+    body.appendChild(slettRad);
+
     div.appendChild(body);
     return div;
   }
@@ -336,7 +354,29 @@
           return;
         }
         empty.hidden = true;
-        snap.forEach((doc) => grid.appendChild(renderKort(doc.id, doc.data())));
+
+        // Grupper Facebook- og Instagram-varianten av samme bilde
+        // sammen (delt gruppeId), slik at de vises side ved side.
+        const grupper = new Map();
+        const rekkefolge = [];
+        snap.forEach((doc) => {
+          const data = doc.data();
+          const nokkel = data.gruppeId || doc.id;
+          if (!grupper.has(nokkel)) {
+            grupper.set(nokkel, []);
+            rekkefolge.push(nokkel);
+          }
+          grupper.get(nokkel).push({ id: doc.id, data });
+        });
+
+        rekkefolge.forEach((nokkel) => {
+          const gruppeDiv = document.createElement("div");
+          gruppeDiv.className = "gruppe";
+          grupper.get(nokkel).forEach(({ id, data }) => {
+            gruppeDiv.appendChild(renderKort(id, data));
+          });
+          grid.appendChild(gruppeDiv);
+        });
       });
   }
 
