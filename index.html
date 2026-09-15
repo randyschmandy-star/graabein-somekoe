@@ -178,44 +178,35 @@
   .badge.plattform-instagram { background: var(--ig); color: white; }
   .badge.type { background: #ddd6c8; color: var(--ink); }
 
-  .legg-til-kort {
-    flex: 1 1 260px;
-    max-width: 320px;
-    border: 2px dashed var(--line);
-    border-radius: 12px;
+  .type-velger {
     display: flex;
-    align-items: stretch;
-    justify-content: center;
-    min-height: 120px;
-    padding: 16px;
+    gap: 6px;
+    flex-wrap: wrap;
   }
-  .legg-til-kort button.apne {
-    background: transparent;
+  .type-knapp {
+    background: var(--bg);
     color: var(--muted);
-    border: none;
-    font-size: 0.85rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 0.8rem;
     cursor: pointer;
-    width: 100%;
   }
-  .legg-til-skjema button.btn-add {
-    width: 100%;
+  .type-knapp.valgt {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-color: var(--accent);
   }
-  .legg-til-skjema {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-  .legg-til-skjema label {
-    font-size: 0.75rem;
-    color: var(--muted);
+  .type-knapp:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
   }
 </style>
 </head>
 <body>
 
 <h1>Graabein Skjegg – Innleggskø</h1>
-<p class="sub">Se over utkast, rediger tekst, velg tidspunkt, og godkjenn. Ulike varianter (plattform × innlegg/story/reel) av samme bilde eller video vises side ved side.</p>
+<p class="sub">Se over utkast, rediger tekst, velg format (innlegg/story/reel) og tidspunkt, og godkjenn. Facebook- og Instagram-varianten vises side ved side.</p>
 
 <div class="tabs">
   <div class="tab active" data-tab="utkast">Til godkjenning</div>
@@ -314,10 +305,12 @@
     plattformBadge.className = `badge plattform-${data.plattform || "ukjent"}`;
     plattformBadge.textContent = plattformNavn(data.plattform);
     badges.appendChild(plattformBadge);
-    const typeBadge = document.createElement("span");
-    typeBadge.className = "badge type";
-    typeBadge.textContent = typeNavn(type);
-    badges.appendChild(typeBadge);
+    if (data.status !== "utkast") {
+      const typeBadge = document.createElement("span");
+      typeBadge.className = "badge type";
+      typeBadge.textContent = typeNavn(type);
+      badges.appendChild(typeBadge);
+    }
     body.appendChild(badges);
 
     const textarea = document.createElement("textarea");
@@ -325,14 +318,46 @@
     textarea.disabled = data.status !== "utkast";
     body.appendChild(textarea);
 
-    if (type === "story") {
-      const hint = document.createElement("div");
-      hint.className = "hint";
-      hint.textContent = "Vises ikke på selve Story-en (Meta støtter ikke bildetekst der) – kun til eget notat.";
-      body.appendChild(hint);
-    }
+    const storyHint = document.createElement("div");
+    storyHint.className = "hint";
+    storyHint.textContent = "Vises ikke på selve Story-en (Meta støtter ikke bildetekst der) – kun til eget notat.";
+    storyHint.hidden = true;
+    body.appendChild(storyHint);
+    if (data.status !== "utkast") storyHint.hidden = type !== "story";
 
     if (data.status === "utkast") {
+      // Format-velger: Innlegg / Story / Reel. Flere kan velges samtidig
+      // (f.eks. både Innlegg og Reel) – da godkjennes hver som sitt eget
+      // innlegg. Reel krever video.
+      const valgteTyper = new Set([type]);
+      const typeRad = document.createElement("div");
+      typeRad.className = "type-velger";
+      const typeKnapper = {};
+      ["feed", "story", "reel"].forEach((t) => {
+        const knapp = document.createElement("button");
+        knapp.type = "button";
+        knapp.className = "type-knapp" + (valgteTyper.has(t) ? " valgt" : "");
+        knapp.textContent = typeNavn(t);
+        if (t === "reel" && mediaType !== "video") {
+          knapp.disabled = true;
+          knapp.title = "Reel krever video";
+        }
+        knapp.onclick = () => {
+          if (valgteTyper.has(t)) {
+            if (valgteTyper.size === 1) return; // minst én type må være valgt
+            valgteTyper.delete(t);
+          } else {
+            valgteTyper.add(t);
+          }
+          knapp.classList.toggle("valgt");
+          storyHint.hidden = !valgteTyper.has("story");
+        };
+        typeKnapper[t] = knapp;
+        typeRad.appendChild(knapp);
+      });
+      body.appendChild(typeRad);
+      storyHint.hidden = !valgteTyper.has("story");
+
       const timeInput = document.createElement("input");
       timeInput.type = "datetime-local";
       timeInput.value = formatDatetimeLocal(data.planlagtTid);
@@ -346,18 +371,34 @@
       godkjennBtn.className = "btn-approve";
       godkjennBtn.textContent = "Godkjenn";
       godkjennBtn.onclick = async () => {
-        if (type === "reel" && mediaType !== "video") {
-          alert("Reel krever video. Dette kortet har bare bilde, så det kan ikke godkjennes som Reel.");
-          return;
-        }
-        const oppdatering = {
+        const typer = Array.from(valgteTyper);
+        const planlagtTid = timeInput.value
+          ? firebase.firestore.Timestamp.fromDate(new Date(timeInput.value))
+          : null;
+
+        // Første valgte type gjenbruker dette dokumentet. Eventuelle
+        // ekstra valgte typer (f.eks. både Innlegg og Reel) blir egne,
+        // nye dokumenter i samme gruppe.
+        await db.collection("innlegg").doc(id).update({
           status: "godkjent",
           tekst: textarea.value,
-          planlagtTid: timeInput.value
-            ? firebase.firestore.Timestamp.fromDate(new Date(timeInput.value))
-            : null,
-        };
-        await db.collection("innlegg").doc(id).update(oppdatering);
+          type: typer[0],
+          planlagtTid,
+        });
+
+        for (const ekstraType of typer.slice(1)) {
+          await db.collection("innlegg").add({
+            mediaUrl,
+            mediaType,
+            tekst: textarea.value,
+            status: "godkjent",
+            plattform: data.plattform,
+            type: ekstraType,
+            gruppeId: data.gruppeId || id,
+            planlagtTid,
+            opprettet: firebase.firestore.FieldValue.serverTimestamp(),
+          });
+        }
       };
       actions.appendChild(godkjennBtn);
 
@@ -420,112 +461,6 @@
     return div;
   }
 
-  /**
-   * "+ Legg til variant"-kort: lar deg opprette en ny plattform/type-
-   * kombinasjon (f.eks. legge en Reel til et bilde-sett, eller legge
-   * Instagram-varianten til noe som til nå bare har Facebook).
-   * Ny variant blir alltid et nytt utkast med samme gruppeId.
-   */
-  function renderLeggTilKort(gruppeId, forslag) {
-    const div = document.createElement("div");
-    div.className = "legg-til-kort";
-
-    const apneBtn = document.createElement("button");
-    apneBtn.className = "apne";
-    apneBtn.textContent = "+ Legg til variant";
-
-    const skjema = document.createElement("div");
-    skjema.className = "legg-til-skjema";
-    skjema.style.display = "none";
-
-    const plattformSelect = document.createElement("select");
-    ["facebook", "instagram"].forEach((p) => {
-      const opt = document.createElement("option");
-      opt.value = p;
-      opt.textContent = plattformNavn(p);
-      plattformSelect.appendChild(opt);
-    });
-
-    const typeSelect = document.createElement("select");
-    ["feed", "story", "reel"].forEach((t) => {
-      const opt = document.createElement("option");
-      opt.value = t;
-      opt.textContent = typeNavn(t);
-      typeSelect.appendChild(opt);
-    });
-
-    const mediaTypeSelect = document.createElement("select");
-    [["image", "Bilde"], ["video", "Video"]].forEach(([v, navn]) => {
-      const opt = document.createElement("option");
-      opt.value = v;
-      opt.textContent = navn;
-      mediaTypeSelect.appendChild(opt);
-    });
-    mediaTypeSelect.value = forslag.mediaType || "image";
-
-    typeSelect.addEventListener("change", () => {
-      if (typeSelect.value === "reel") mediaTypeSelect.value = "video";
-    });
-
-    const mediaUrlInput = document.createElement("input");
-    mediaUrlInput.type = "url";
-    mediaUrlInput.value = forslag.mediaUrl || "";
-    mediaUrlInput.placeholder = "URL til bilde/video (Firebase Storage)";
-
-    const tekstInput = document.createElement("textarea");
-    tekstInput.value = forslag.tekst || "";
-    tekstInput.placeholder = "Bildetekst for denne varianten";
-
-    const lagBtn = document.createElement("button");
-    lagBtn.className = "btn-add";
-    lagBtn.textContent = "Opprett utkast";
-    lagBtn.onclick = async () => {
-      if (typeSelect.value === "reel" && mediaTypeSelect.value !== "video") {
-        alert("Reel krever video – velg Video som medietype, eller lim inn en videourl.");
-        return;
-      }
-      if (!mediaUrlInput.value) {
-        alert("Fyll inn en URL til bilde eller video.");
-        return;
-      }
-      await db.collection("innlegg").add({
-        mediaUrl: mediaUrlInput.value,
-        mediaType: mediaTypeSelect.value,
-        tekst: tekstInput.value,
-        status: "utkast",
-        plattform: plattformSelect.value,
-        type: typeSelect.value,
-        gruppeId,
-        opprettet: firebase.firestore.FieldValue.serverTimestamp(),
-      });
-      skjema.style.display = "none";
-      apneBtn.style.display = "";
-    };
-
-    [
-      ["Plattform", plattformSelect],
-      ["Type", typeSelect],
-      ["Medietype", mediaTypeSelect],
-      ["Bilde/video-URL", mediaUrlInput],
-      ["Tekst", tekstInput],
-    ].forEach(([navn, felt]) => {
-      const label = document.createElement("label");
-      label.textContent = navn;
-      skjema.appendChild(label);
-      skjema.appendChild(felt);
-    });
-    skjema.appendChild(lagBtn);
-
-    apneBtn.onclick = () => {
-      skjema.style.display = "flex";
-      apneBtn.style.display = "none";
-    };
-
-    div.appendChild(apneBtn);
-    div.appendChild(skjema);
-    return div;
-  }
-
   function lyttPaKollen() {
     if (unsubscribe) unsubscribe();
     const grid = document.getElementById("grid");
@@ -563,14 +498,6 @@
           dokumenter.forEach(({ id, data }) => {
             gruppeDiv.appendChild(renderKort(id, data));
           });
-          const forste = dokumenter[0].data;
-          gruppeDiv.appendChild(
-            renderLeggTilKort(nokkel, {
-              mediaUrl: forste.mediaUrl || forste.bildeUrl,
-              mediaType: forste.mediaType || "image",
-              tekst: "",
-            })
-          );
           grid.appendChild(gruppeDiv);
         });
       });
