@@ -352,15 +352,18 @@
   document.getElementById("loggUtBtn").addEventListener("click", () => auth.signOut());
 
   auth.onAuthStateChanged((user) => {
+    // OBS: loginScreen har klassen "card", som setter display:flex – det
+    // overstyrer [hidden] (samme fallgruve som type-velgeren tidligere).
+    // Derfor styres loginScreen via style.display, ikke .hidden.
     if (user) {
-      loginScreen.hidden = true;
+      loginScreen.style.display = "none";
       appEl.hidden = false;
       loginPassord.value = "";
       lyttPaKollen();
     } else {
       if (unsubscribe) { unsubscribe(); unsubscribe = null; }
       appEl.hidden = true;
-      loginScreen.hidden = false;
+      loginScreen.style.display = "";
     }
   });
 
