@@ -100,7 +100,7 @@
     border: 1px solid var(--line);
     border-radius: 8px;
   }
-  input[type="text"], input[type="url"], select {
+  input[type="text"], input[type="url"], input[type="email"], input[type="password"], select {
     width: 100%;
     padding: 7px 8px;
     border: 1px solid var(--line);
@@ -223,12 +223,45 @@
   .checkbox-row input {
     width: auto;
   }
+
+  .login-box {
+    max-width: 340px;
+    margin-bottom: 28px;
+  }
+  .login-box h2 {
+    margin: 0;
+    font-size: 1.05rem;
+  }
+  .header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
 </style>
 </head>
 <body>
 
 <h1>Graabein Skjegg – Innleggskø</h1>
 <p class="sub">Se over utkast, rediger tekst, velg format (innlegg/story/reel) og tidspunkt, og godkjenn. Facebook- og Instagram-varianten vises side ved side.</p>
+
+<div id="loginScreen" class="login-box card">
+  <div class="card-body">
+    <h2>Logg inn</h2>
+    <input type="email" id="loginEpost" placeholder="E-post" autocomplete="username" />
+    <input type="password" id="loginPassord" placeholder="Passord" autocomplete="current-password" />
+    <button class="btn-approve" id="loggInnBtn" style="width:100%;">Logg inn</button>
+    <div class="status-line error" id="loginFeil" hidden></div>
+  </div>
+</div>
+
+<div id="app" hidden>
+
+<div class="header-row">
+  <div></div>
+  <button class="btn-delete" id="loggUtBtn">Logg ut</button>
+</div>
 
 <div class="uploader card">
   <div class="card-body">
@@ -260,6 +293,8 @@
 <div id="grid" class="grid"></div>
 <div id="empty" class="empty" hidden>Ingenting her akkurat nå.</div>
 
+</div><!-- /#app -->
+
 <!-- ====== TODO: fyll inn din Firebase-konfigurasjon (Prosjektinnstillinger → Dine apper) ====== -->
 <script>
   const firebaseConfig = {
@@ -274,10 +309,12 @@
 <!-- ============================================================================================ -->
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 <script>
   firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
   const db = firebase.firestore();
   const storage = firebase.storage();
 
@@ -286,6 +323,46 @@
 
   let currentTab = "utkast";
   let unsubscribe = null;
+
+  // ---------------------------------------------------------------------
+  // Innlogging: siden krever nå en Firebase-bruker. Reglene i Firestore
+  // og Storage håndhever det samme (request.auth != null), så et ukjent
+  // besøk her kan verken se eller skrive noe – ikke bare skjules i UI-et.
+  // ---------------------------------------------------------------------
+  const loginScreen = document.getElementById("loginScreen");
+  const appEl = document.getElementById("app");
+  const loginEpost = document.getElementById("loginEpost");
+  const loginPassord = document.getElementById("loginPassord");
+  const loginFeil = document.getElementById("loginFeil");
+
+  document.getElementById("loggInnBtn").addEventListener("click", async () => {
+    loginFeil.hidden = true;
+    try {
+      await auth.signInWithEmailAndPassword(loginEpost.value.trim(), loginPassord.value);
+    } catch (err) {
+      loginFeil.textContent = "Feil e-post eller passord.";
+      loginFeil.hidden = false;
+    }
+  });
+
+  loginPassord.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") document.getElementById("loggInnBtn").click();
+  });
+
+  document.getElementById("loggUtBtn").addEventListener("click", () => auth.signOut());
+
+  auth.onAuthStateChanged((user) => {
+    if (user) {
+      loginScreen.hidden = true;
+      appEl.hidden = false;
+      loginPassord.value = "";
+      lyttPaKollen();
+    } else {
+      if (unsubscribe) { unsubscribe(); unsubscribe = null; }
+      appEl.hidden = true;
+      loginScreen.hidden = false;
+    }
+  });
 
   document.querySelectorAll(".tab").forEach((tab) => {
     tab.addEventListener("click", () => {
@@ -641,8 +718,6 @@
       opprettBtn.disabled = false;
     }
   });
-
-  lyttPaKollen();
 </script>
 </body>
 </html>
