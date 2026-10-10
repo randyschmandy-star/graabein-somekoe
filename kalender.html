@@ -1,0 +1,2087 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Graabein Skjegg – Markedsføringskalender</title>
+<style>
+  :root {
+    --bg: #f6f5f2;
+    --card: #ffffff;
+    --ink: #1f1b16;
+    --muted: #6b6259;
+    --line: #e7e2da;
+    --soft: #f0ede7;
+    --accent: #3f3a2e;
+    --accent-ink: #ffffff;
+    --orange: #e2690f;
+    --good: #3a7a4e;
+    --bad: #a3402f;
+    --warn: #b8862f;
+    --fb: #1877f2;
+    --ig: #c13584;
+    --t-some: #8a4fbf;
+    --t-nyhetsbrev: #dd7019;
+    --t-kampanje: #b8862f;
+    --t-blogg: #3a7a4e;
+    --t-notat: #7d7469;
+    --t-merkedag: #a8323e;
+    --p-utkast: #9a9087;
+    --p-godkjent: #2f6fdb;
+    --p-postet: #3a7a4e;
+    --p-feilet: #c0392b;
+    --md-bw: #33302c;
+    --shadow: 0 12px 40px rgba(31, 27, 22, 0.18);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161412;
+      --card: #211e1a;
+      --ink: #f0ebe3;
+      --muted: #a39a8e;
+      --line: #37322b;
+      --soft: #1b1916;
+      --accent: #ece3d3;
+      --accent-ink: #1f1b16;
+      --orange: #f07a22;
+      --md-bw: #5e574e;
+      --shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 15px;
+  }
+  body.laast { overflow: hidden; }
+  button { font: inherit; color: inherit; }
+  a { color: var(--orange); }
+  [hidden] { display: none !important; }
+  .ik { width: 14px; height: 14px; flex: none; display: block; }
+
+  /* ---------- Innlogging ---------- */
+  .login {
+    max-width: 340px;
+    margin: 12vh auto 0;
+    padding: 0 16px;
+  }
+  .login .boks { display: flex; flex-direction: column; gap: 10px; }
+  .login h1 { font-size: 1.2rem; margin: 0 0 4px; }
+
+  /* ---------- Topp ---------- */
+  .topp {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+    padding: 10px 20px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 14px;
+  }
+  .merke { display: flex; flex-direction: column; margin-right: 6px; }
+  .merke h1 { font-size: 1.05rem; margin: 0; white-space: nowrap; }
+  .merke a { font-size: 0.75rem; color: var(--muted); text-decoration: none; }
+  .merke a:hover { color: var(--orange); }
+  .navi { display: flex; align-items: center; gap: 6px; }
+  .navi h2 { font-size: 1.1rem; margin: 0 0 0 6px; min-width: 150px; white-space: nowrap; }
+  .fyll { flex: 1; }
+  .knapp {
+    border: 1px solid var(--line);
+    background: var(--card);
+    color: var(--ink);
+    border-radius: 8px;
+    padding: 7px 12px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    text-decoration: none;
+  }
+  .knapp:hover { border-color: var(--muted); }
+  .knapp:disabled { opacity: 0.5; cursor: not-allowed; }
+  .knapp.hoved { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .knapp.bra { background: var(--good); color: #fff; border-color: var(--good); }
+  .knapp.fare { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, var(--line)); }
+  .knapp.stille { background: transparent; border-color: transparent; color: var(--muted); }
+  .knapp.stille:hover { color: var(--ink); }
+  .ikonknapp { width: 34px; height: 34px; padding: 0; justify-content: center; }
+  .segment { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--card); }
+  .segment button { border: 0; background: transparent; padding: 7px 12px; font-size: 0.85rem; cursor: pointer; color: var(--muted); }
+  .segment button.paa { background: var(--accent); color: var(--accent-ink); }
+  .filtre { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+  .filtre::-webkit-scrollbar { display: none; }
+  .filter {
+    border-radius: 999px;
+    padding: 5px 11px 5px 9px;
+    font-size: 0.8rem;
+    border: 1px solid var(--line);
+    background: var(--card);
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .filter i { width: 9px; height: 9px; border-radius: 50%; background: var(--c); }
+  .filter.av { color: var(--muted); }
+  .filter.av i { background: transparent; box-shadow: inset 0 0 0 1.5px var(--c); }
+
+  .feilbanner {
+    background: color-mix(in srgb, var(--bad) 12%, var(--card));
+    border: 1px solid color-mix(in srgb, var(--bad) 40%, var(--line));
+    color: var(--ink);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin: 14px 20px 0;
+    font-size: 0.85rem;
+  }
+  .feilbanner code { font-size: 0.78rem; background: var(--soft); padding: 1px 4px; border-radius: 4px; }
+
+  /* ---------- Hovedoppsett ---------- */
+  .innhold {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 310px;
+    gap: 20px;
+    padding: 16px 20px 64px;
+    max-width: 1640px;
+    margin: 0 auto;
+  }
+  @media (max-width: 1100px) {
+    .innhold { grid-template-columns: minmax(0, 1fr); }
+    body.v-liste .boks.neste { display: none; }
+  }
+
+  /* ---------- Månedsvisning ---------- */
+  .mnd { background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .mnd-hode, .uke { display: grid; grid-template-columns: 30px repeat(7, minmax(0, 1fr)); }
+  .mnd-hode div {
+    font-size: 0.72rem;
+    color: var(--muted);
+    padding: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--line);
+  }
+  .mnd-hode .uk { padding: 8px 0; text-align: center; }
+  .ukenr {
+    font-size: 0.68rem;
+    color: var(--muted);
+    padding-top: 9px;
+    text-align: center;
+    border-right: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+  .uke:last-child > * { border-bottom: 0; }
+  .dag {
+    min-height: 122px;
+    border-right: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    padding: 4px 0 6px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    outline: none;
+  }
+  .uke > .dag:last-child { border-right: 0; }
+  .dag:hover { background: color-mix(in srgb, var(--accent) 3.5%, var(--card)); }
+  .dag:focus-visible { box-shadow: inset 0 0 0 2px var(--orange); }
+  .dag.annen { background: var(--soft); }
+  .dag.annen .nr { opacity: 0.45; }
+  .dag.drop { box-shadow: inset 0 0 0 2px var(--orange); background: color-mix(in srgb, var(--orange) 8%, var(--card)); }
+  .dag-hode { display: flex; align-items: center; gap: 6px; padding: 0 6px; min-height: 24px; }
+  .nr {
+    font-size: 0.82rem;
+    font-weight: 600;
+    min-width: 24px;
+    height: 24px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    font-variant-numeric: tabular-nums;
+  }
+  .dag.rod .nr { color: var(--bad); }
+  .dag.idag .nr { background: var(--orange); color: #fff; }
+  .hd { font-size: 0.66rem; color: var(--bad); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .striper { display: flex; flex-direction: column; gap: 2px; }
+  .stripe {
+    display: block;
+    width: 100%;
+    height: 17px;
+    border: 0;
+    background: var(--c);
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 600;
+    line-height: 17px;
+    padding: 0 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: left;
+    cursor: pointer;
+  }
+  .stripe.start { margin-left: 5px; width: calc(100% - 5px); border-radius: 5px 0 0 5px; }
+  .stripe.slutt { width: calc(100% - 5px); border-radius: 0 5px 5px 0; }
+  .stripe.start.slutt { width: calc(100% - 10px); border-radius: 5px; }
+  .stripe.tom { visibility: hidden; }
+  .stripe.ferdig { opacity: 0.55; }
+  .chips { display: flex; flex-direction: column; gap: 2px; padding: 0 4px; min-width: 0; }
+  .chip {
+    --c: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+    min-width: 0;
+    font-size: 0.73rem;
+    line-height: 1.3;
+    text-align: left;
+    padding: 2px 6px 2px 5px;
+    border: 0;
+    border-left: 3px solid var(--c);
+    border-radius: 5px;
+    background: color-mix(in srgb, var(--c) 13%, var(--card));
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .chip:hover { background: color-mix(in srgb, var(--c) 22%, var(--card)); }
+  .chip .tx { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; }
+  .chip .tid { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 0.68rem; flex: none; }
+  .chip .etter { font-size: 0.66rem; color: inherit; opacity: 0.8; flex: none; }
+  .chip .ik { width: 12px; height: 12px; }
+  .chip.k-merkedag { background: var(--c); color: #fff; font-weight: 600; }
+  .chip.k-markor { font-weight: 600; color: var(--c); background: color-mix(in srgb, var(--c) 9%, var(--card)); }
+  .chip.k-forvarsel { background: transparent; color: var(--c); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 45%, transparent); }
+  .chip.utkast, .rad.utkast { border-left-style: dashed; }
+  .chip.ide, .rad.ide { border-left-style: dotted; }
+  .chip.ferdig .tx, .rad.ferdig .radtittel { text-decoration: line-through; opacity: 0.6; }
+  .chip.feilet { background: color-mix(in srgb, var(--p-feilet) 18%, var(--card)); }
+  .pl { display: inline-flex; gap: 2px; flex: none; }
+  .pl .fb { color: var(--fb); }
+  .pl .ig { color: var(--ig); }
+  .chip.dra { opacity: 0.4; }
+  .mer {
+    font-size: 0.7rem;
+    color: var(--muted);
+    background: none;
+    border: 0;
+    text-align: left;
+    padding: 1px 8px;
+    cursor: pointer;
+  }
+  .mer:hover { color: var(--ink); }
+  .prikker { display: none; }
+  .forklaring {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin: 10px 2px 0;
+  }
+  .forklaring span { display: inline-flex; align-items: center; gap: 5px; }
+  .forklaring i { width: 10px; height: 10px; border-radius: 3px; background: var(--c); }
+  .forklaring i.strek { background: transparent; border-left: 3px dashed var(--c); border-radius: 0; width: 6px; }
+
+  @media (max-width: 700px) {
+    .topp { padding: 8px 12px; gap: 8px; }
+    .merke h1 { font-size: 0.95rem; }
+    .navi h2 { font-size: 1rem; min-width: 0; }
+    .innhold { padding: 12px 12px 64px; gap: 14px; }
+    .mnd-hode, .uke { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+    .ukenr, .mnd-hode .uk { display: none; }
+    .mnd-hode div { padding: 6px 0; text-align: center; font-size: 0.65rem; }
+    .dag { min-height: 62px; padding: 3px 0 5px; gap: 2px; }
+    .dag-hode { justify-content: center; padding: 0; min-height: 22px; }
+    .nr { font-size: 0.78rem; min-width: 22px; height: 22px; }
+    .chips, .hd, .mer { display: none; }
+    .stripe { height: 4px; font-size: 0; padding: 0; pointer-events: none; }
+    .stripe.start { margin-left: 3px; width: calc(100% - 3px); border-radius: 2px 0 0 2px; }
+    .stripe.slutt { width: calc(100% - 3px); border-radius: 0 2px 2px 0; }
+    .stripe.start.slutt { width: calc(100% - 6px); border-radius: 2px; }
+    .prikker { display: flex; flex-wrap: wrap; justify-content: center; gap: 3px; padding: 2px 4px 0; }
+    .prikker i { width: 7px; height: 7px; border-radius: 50%; background: var(--c); }
+    .prikker i.hul { background: transparent; box-shadow: inset 0 0 0 1.5px var(--c); }
+  }
+
+  /* ---------- Liste og sidepanel ---------- */
+  .liste { display: flex; flex-direction: column; gap: 16px; }
+  .listedag h4 { margin: 0 0 6px; font-size: 0.82rem; font-weight: 600; color: var(--muted); }
+  .listedag h4 button { background: none; border: 0; padding: 0; cursor: pointer; color: inherit; font-weight: inherit; }
+  .listedag.idag h4 { color: var(--orange); }
+  .tom { color: var(--muted); font-size: 0.9rem; padding: 24px 4px; margin: 0; }
+  .side { display: flex; flex-direction: column; gap: 14px; }
+  .boks { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+  .boks h3 { font-size: 0.9rem; margin: 0 0 10px; display: flex; align-items: center; gap: 8px; }
+  .boks.varsel { border-color: color-mix(in srgb, var(--p-feilet) 55%, var(--line)); }
+  .boks.varsel h3 { color: var(--p-feilet); }
+  .sidedag { font-size: 0.72rem; color: var(--muted); font-weight: 600; margin: 10px 0 5px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .sidedag:first-of-type { margin-top: 0; }
+  .rader { display: flex; flex-direction: column; gap: 6px; }
+  .rad {
+    --c: var(--muted);
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: var(--soft);
+    border: 0;
+    border-left: 3px solid var(--c);
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    min-width: 0;
+  }
+  .rad:hover { background: color-mix(in srgb, var(--c) 10%, var(--soft)); }
+  .rad.k-merkedag { background: color-mix(in srgb, var(--c) 12%, var(--card)); }
+  .radikon { color: var(--c); flex: none; display: grid; place-items: center; width: 20px; }
+  .radtekst { display: flex; flex-direction: column; min-width: 0; flex: 1; gap: 1px; }
+  .radtittel { font-size: 0.86rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .meta { font-size: 0.72rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .minithumb { width: 38px; height: 38px; border-radius: 6px; object-fit: cover; background: #000; flex: none; display: block; }
+  .dytt { font-size: 0.8rem; color: var(--muted); background: var(--soft); border-radius: 8px; padding: 10px 12px; margin-top: 10px; }
+
+  /* ---------- Panel ---------- */
+  dialog#panel {
+    border: 0;
+    padding: 0;
+    border-radius: 16px;
+    width: min(760px, calc(100vw - 32px));
+    max-width: none;
+    max-height: calc(100vh - 48px);
+    max-height: calc(100dvh - 48px);
+    background: var(--card);
+    color: var(--ink);
+    box-shadow: var(--shadow);
+  }
+  dialog#panel[open] { display: flex; flex-direction: column; }
+  dialog#panel::backdrop { background: rgba(20, 17, 14, 0.5); }
+  .p-hode { display: flex; align-items: center; gap: 6px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .p-hode h2 { font-size: 1.05rem; margin: 0 4px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .p-innhold { padding: 16px 18px 22px; overflow: auto; flex: 1; overscroll-behavior: contain; }
+  .p-fot { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--line); flex-wrap: wrap; align-items: center; }
+  @media (max-width: 700px) {
+    dialog#panel {
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      max-height: none;
+      margin: 0;
+      border-radius: 0;
+    }
+    .p-innhold { padding: 14px 14px 22px; }
+    .p-fot { padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); }
+    .p-fot .knapp { flex: 1; justify-content: center; }
+    .p-fot .fyll { display: none; }
+  }
+  .p-meta { font-size: 0.8rem; color: var(--muted); margin: -4px 0 14px; }
+  .p-meta .hd { font-size: inherit; }
+  .seksjon { margin-top: 20px; }
+  .seksjon:first-child { margin-top: 0; }
+  .seksjon > h3 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin: 0 0 8px; font-weight: 600; }
+  .leggtil-knapper { display: flex; flex-wrap: wrap; gap: 8px; }
+  .lt {
+    --c: var(--muted);
+    display: inline-flex;
+    gap: 7px;
+    align-items: center;
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--c);
+    background: var(--card);
+    border-radius: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 0.85rem;
+  }
+  .lt .ik { color: var(--c); }
+  .lt:hover { background: color-mix(in srgb, var(--c) 8%, var(--card)); }
+
+  .felt { display: flex; flex-direction: column; gap: 4px; font-size: 0.78rem; color: var(--muted); min-width: 0; }
+  .felt input, .felt select, .felt textarea, .inp {
+    font: inherit;
+    font-size: 0.92rem;
+    color: var(--ink);
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px 10px;
+    width: 100%;
+    min-width: 0;
+  }
+  .felt input:focus, .felt select:focus, .felt textarea:focus, .inp:focus { outline: 2px solid color-mix(in srgb, var(--orange) 60%, transparent); outline-offset: -1px; border-color: transparent; }
+  .felt textarea { min-height: 96px; resize: vertical; line-height: 1.45; }
+  .felt input[type="date"], .felt input[type="time"] { min-height: 38px; }
+  .tittelfelt input { font-size: 1.05rem; font-weight: 600; }
+  .rutenett { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+  .stabel { display: flex; flex-direction: column; gap: 12px; }
+  .teller { font-size: 0.7rem; color: var(--muted); text-align: right; }
+  .teller.over { color: var(--bad); font-weight: 600; }
+  .hint { font-size: 0.76rem; color: var(--muted); margin: 0; }
+  .feiltekst { color: var(--bad); font-size: 0.82rem; margin: 0; }
+  .infolinje { font-size: 0.85rem; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+  .sjekk { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
+  .sjekk input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--good); flex: none; margin: 0; }
+  .sjekk .t { flex: 1; border: 0; background: transparent; padding: 5px 4px; font: inherit; font-size: 0.9rem; color: var(--ink); border-radius: 6px; min-width: 0; }
+  .sjekk .t:focus { background: var(--soft); outline: none; }
+  .sjekk.ok .t { text-decoration: line-through; color: var(--muted); }
+  .sjekk .x { opacity: 0; }
+  .sjekk:hover .x, .sjekk .t:focus + .x { opacity: 1; }
+  @media (hover: none) { .sjekk .x { opacity: 0.6; } }
+  .nysjekk { display: flex; gap: 8px; margin-top: 4px; }
+
+  .thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+  .thumb { position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; background: #000; }
+  .thumb img, .thumb video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thumb .fjern {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 0;
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    padding: 0;
+  }
+  .thumb .merk { position: absolute; left: 4px; top: 4px; background: rgba(0, 0, 0, 0.6); color: #fff; font-size: 0.62rem; padding: 1px 5px; border-radius: 4px; }
+  .thumb .advarsel { position: absolute; left: 0; right: 0; bottom: 0; background: rgba(163, 64, 47, 0.92); color: #fff; font-size: 0.62rem; line-height: 1.25; padding: 3px 5px; }
+  .thumb .laster { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-size: 0.8rem; background: rgba(0, 0, 0, 0.55); }
+  .leggtil {
+    border: 1.5px dashed var(--line);
+    border-radius: 8px;
+    aspect-ratio: 1;
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: 4px;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 0.78rem;
+    text-align: center;
+    background: transparent;
+    padding: 6px;
+  }
+  .leggtil:hover { border-color: var(--muted); color: var(--ink); }
+  .stor-media { display: flex; gap: 6px; overflow-x: auto; border-radius: 10px; background: #000; justify-content: center; }
+  .stor-media.flere { justify-content: flex-start; }
+  .stor-media img, .stor-media video { height: 220px; max-width: 100%; object-fit: contain; display: block; flex: none; }
+  .stor-media.flere img, .stor-media.flere video { width: 180px; height: 180px; object-fit: cover; }
+
+  .velg { display: flex; gap: 6px; flex-wrap: wrap; }
+  .valg {
+    border: 1px solid var(--line);
+    background: var(--card);
+    color: var(--muted);
+    border-radius: 999px;
+    padding: 6px 13px;
+    font-size: 0.84rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .valg.paa { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .valg:disabled { opacity: 0.4; cursor: not-allowed; }
+  .valg .ik { width: 13px; height: 13px; }
+  .badge { display: inline-flex; align-items: center; gap: 4px; font-size: 0.7rem; padding: 2px 8px; border-radius: 999px; background: var(--soft); color: var(--muted); white-space: nowrap; }
+  .badge.facebook { background: var(--fb); color: #fff; }
+  .badge.instagram { background: var(--ig); color: #fff; }
+  .badge.st-utkast { background: color-mix(in srgb, var(--p-utkast) 20%, var(--card)); color: var(--ink); }
+  .badge.st-godkjent { background: color-mix(in srgb, var(--p-godkjent) 18%, var(--card)); color: var(--p-godkjent); }
+  .badge.st-postet { background: color-mix(in srgb, var(--p-postet) 18%, var(--card)); color: var(--p-postet); }
+  .badge.st-feilet { background: color-mix(in srgb, var(--p-feilet) 18%, var(--card)); color: var(--p-feilet); }
+  .postdoc { border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .postdoc .infolinje { justify-content: space-between; }
+  .periodekort { display: flex; flex-direction: column; gap: 6px; }
+
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    transform: translateX(-50%);
+    background: var(--accent);
+    color: var(--accent-ink);
+    padding: 10px 14px 10px 16px;
+    border-radius: 10px;
+    font-size: 0.86rem;
+    box-shadow: var(--shadow);
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    z-index: 100;
+    max-width: calc(100vw - 32px);
+  }
+  .toast button { background: none; border: 0; color: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; padding: 0; }
+  dialog .toast { bottom: 92px; }
+  @media (max-width: 700px) { #appleBtn span, #loggUtBtn { display: none; } }
+  @media (max-width: 700px) { .toast { bottom: calc(84px + env(safe-area-inset-bottom)); } }
+</style>
+</head>
+<body>
+
+<div id="loginSkjerm" class="login" hidden>
+  <div class="boks">
+    <h1>Markedsføringskalender</h1>
+    <p class="hint">Logg inn med samme bruker som innleggskøen.</p>
+    <input class="inp" type="email" id="loginEpost" placeholder="E-post" autocomplete="username" />
+    <input class="inp" type="password" id="loginPassord" placeholder="Passord" autocomplete="current-password" />
+    <button class="knapp hoved" id="loggInnBtn" style="justify-content:center">Logg inn</button>
+    <p class="feiltekst" id="loginFeil" hidden></p>
+  </div>
+</div>
+
+<div id="app" hidden>
+  <header class="topp">
+    <div class="merke">
+      <h1>Markedsføringskalender</h1>
+      <a href="./">Innleggskø &rarr;</a>
+    </div>
+    <div class="navi">
+      <button class="knapp ikonknapp" id="forrige" aria-label="Forrige måned"></button>
+      <button class="knapp" id="idagBtn">I dag</button>
+      <button class="knapp ikonknapp" id="neste" aria-label="Neste måned"></button>
+      <h2 id="mndTittel"></h2>
+    </div>
+    <div class="fyll"></div>
+    <div class="segment" role="tablist">
+      <button data-visning="maned">Måned</button>
+      <button data-visning="liste">Liste</button>
+    </div>
+    <button class="knapp" id="appleBtn"></button>
+    <button class="knapp hoved" id="nyBtn"></button>
+    <button class="knapp stille" id="loggUtBtn">Logg ut</button>
+    <div class="filtre" id="filtre" style="flex-basis:100%"></div>
+  </header>
+
+  <div id="feilbanner" class="feilbanner" hidden></div>
+
+  <div class="innhold">
+    <main>
+      <div id="maned"></div>
+      <div id="liste" class="liste" hidden></div>
+    </main>
+    <aside class="side" id="side"></aside>
+  </div>
+</div>
+
+<dialog id="panel" aria-labelledby="pTittel">
+  <div class="p-hode">
+    <button class="knapp ikonknapp stille" id="pTilbake" aria-label="Tilbake"></button>
+    <h2 id="pTittel"></h2>
+    <button class="knapp ikonknapp stille" id="pLukk" aria-label="Lukk"></button>
+  </div>
+  <div class="p-innhold" id="pInnhold"></div>
+  <div class="p-fot" id="pFot" hidden></div>
+</dialog>
+
+<input type="file" id="filvelger" accept="image/*,video/*" multiple hidden />
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyDN1sjsPlIF-cq2JVtu6NLmc_gVeTrOLPw",
+    authDomain: "graabeinsome.firebaseapp.com",
+    projectId: "graabeinsome",
+    storageBucket: "graabeinsome.firebasestorage.app",
+    messagingSenderId: "533801152878",
+    appId: "1:533801152878:web:b44288b4e0eb18542c517f",
+  };
+</script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
+<script>
+/* =========================================================================
+   Graabein Skjegg – Markedsføringskalender
+   Bruker samme Firebase-prosjekt som innleggskøen (graabeinsome):
+   - «innlegg»: SoMe-innleggene. Postemotoren (Cloud Function) poster alt med
+     status «godkjent» når planlagtTid er nådd. Kalenderen leser og skriver
+     de samme feltene som køsiden.
+   - «kalender»: alt annet (nyhetsbrev, kampanjer, blogg, notater, SoMe-planer
+     og notater/sjekklister på merkedagene).
+   ========================================================================= */
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+const storage = firebase.storage();
+const TS = firebase.firestore.Timestamp;
+const FV = firebase.firestore.FieldValue;
+
+const NETTBUTIKK = "https://www.graabein-skjegg.no";
+const MAKS_BILDE = 15 * 1024 * 1024;
+const MAKS_VIDEO = 300 * 1024 * 1024;
+const MAKS_MEDIA = 10;
+
+/* ---------- Ikoner ---------- */
+const svg = (inner, fill) => `<svg class="ik" viewBox="0 0 24 24" aria-hidden="true" fill="${fill ? "currentColor" : "none"}" stroke="${fill ? "none" : "currentColor"}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+const IKON = {
+  fb: svg('<path d="M14 8h3V4h-3c-2.8 0-4.4 1.8-4.4 4.4V10H7v4h2.6v8h4v-8h3l.9-4h-3.9V8.7c0-.4.3-.7.7-.7z"/>', true),
+  ig: svg('<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r=".6" fill="currentColor"/>'),
+  brev: svg('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>'),
+  flagg: svg('<path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/>'),
+  dok: svg('<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>'),
+  notat: svg('<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/>'),
+  kamera: svg('<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>'),
+  bjelle: svg('<path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/>'),
+  stjerne: svg('<path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.5 2.9 1-6.1-4.4-4.3 6.1-.9z"/>'),
+  venstre: svg('<path d="m15 18-6-6 6-6"/>'),
+  hoyre: svg('<path d="m9 18 6-6-6-6"/>'),
+  lukk: svg('<path d="M18 6 6 18M6 6l12 12"/>'),
+  pluss: svg('<path d="M12 5v14M5 12h14"/>'),
+  kalender: svg('<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>'),
+  sjekk: svg('<path d="m5 12 5 5 9-10"/>'),
+  utropstegn: svg('<circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5v.5"/>'),
+  ekstern: svg('<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>'),
+};
+
+/* ---------- Typer og statuser ---------- */
+const TYPER = {
+  some: { navn: "SoMe-plan", farge: "var(--t-some)", ikon: "kamera", filter: "some",
+    mal: ["Ta bilde eller video", "Skriv tekst", "Legg i kø"],
+    hint: "En idé eller plan for et innlegg. Når bildet er klart, lager du innlegget herfra." },
+  nyhetsbrev: { navn: "Nyhetsbrev", farge: "var(--t-nyhetsbrev)", ikon: "brev", filter: "nyhetsbrev",
+    mal: ["Skriv tekst", "Velg bilder", "Sett opp i Omnisend", "Send test til deg selv", "Planlegg utsending"] },
+  kampanje: { navn: "Kampanje", farge: "var(--t-kampanje)", ikon: "stjerne", filter: "kampanje",
+    mal: ["Lag forsidetopp", "Sjekk landingssiden", "Nyhetsbrev", "SoMe-innlegg", "Bytt tilbake etterpå"] },
+  blogg: { navn: "Blogg/nettside", farge: "var(--t-blogg)", ikon: "dok", filter: "blogg",
+    mal: ["Skriv utkast", "Bilder og alt-tekst", "SEO-tittel og metabeskrivelse", "Publiser", "Be om indeksering"] },
+  notat: { navn: "Notat", farge: "var(--t-notat)", ikon: "notat", filter: "notat", mal: [] },
+};
+const TYPE_REKKEFOLGE = ["some", "nyhetsbrev", "kampanje", "blogg", "notat"];
+const STATUSER = { ide: "Idé", planlagt: "Planlagt", arbeid: "Under arbeid", ferdig: "Ferdig" };
+const VARSLER = { ingen: "Ingen varsel", "0": "Samme dag kl. 09", "1": "Dagen før kl. 09", "3": "3 dager før kl. 09", "7": "En uke før kl. 09" };
+const FILTRE = {
+  some: { navn: "SoMe", farge: "var(--ig)" },
+  nyhetsbrev: { navn: "Nyhetsbrev", farge: "var(--t-nyhetsbrev)" },
+  kampanje: { navn: "Merkedager og kampanjer", farge: "var(--t-merkedag)" },
+  blogg: { navn: "Blogg/nettside", farge: "var(--t-blogg)" },
+  notat: { navn: "Notater", farge: "var(--t-notat)" },
+};
+const POST_STATUS = { utkast: "Utkast", godkjent: "Planlagt", postet: "Postet", feilet: "Feilet" };
+const POST_TYPE = { feed: "Innlegg", story: "Story", reel: "Reel", carousel: "Karusell" };
+const MD_MAL = ["Bytt forsidetopp (en uke før)", "Sjekk landingssiden", "Nyhetsbrev", "SoMe-innlegg", "Bytt tilbake etterpå"];
+
+/* ---------- Små hjelpere ---------- */
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => Array.from(el.querySelectorAll(s));
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const pad = (n) => String(n).padStart(2, "0");
+const storF = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+function lagreLokalt(k, v) { try { localStorage.setItem("gbk-" + k, JSON.stringify(v)); } catch (e) {} }
+function hentLokalt(k, std) { try { const v = localStorage.getItem("gbk-" + k); return v == null ? std : JSON.parse(v); } catch (e) { return std; } }
+const kopi = (o) => JSON.parse(JSON.stringify(o));
+
+/* ---------- Datoer ---------- */
+const MND = ["januar", "februar", "mars", "april", "mai", "juni", "juli", "august", "september", "oktober", "november", "desember"];
+const MND_K = ["jan.", "feb.", "mars", "apr.", "mai", "juni", "juli", "aug.", "sep.", "okt.", "nov.", "des."];
+const DAG = ["søndag", "mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag"];
+const DAG_K = ["søn.", "man.", "tir.", "ons.", "tor.", "fre.", "lør."];
+const ymd = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const fraYmd = (s) => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
+const plussDager = (s, n) => { const d = fraYmd(s); d.setDate(d.getDate() + n); return ymd(d); };
+const dagerMellom = (a, b) => Math.round((fraYmd(b) - fraYmd(a)) / 864e5);
+const hhmm = (d) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const idag = () => ymd(new Date());
+function fmtDag(s) { const d = fraYmd(s); return `${DAG[d.getDay()]} ${d.getDate()}. ${MND[d.getMonth()]}`; }
+function fmtKort(s) { const d = fraYmd(s); return `${d.getDate()}. ${MND_K[d.getMonth()]}`; }
+function fmtKortDag(s) { const d = fraYmd(s); return `${DAG_K[d.getDay()]} ${d.getDate()}. ${MND_K[d.getMonth()]}`; }
+function fmtPeriode(a, b) {
+  const da = fraYmd(a), dbb = fraYmd(b);
+  if (da.getMonth() === dbb.getMonth()) return `${da.getDate()}.–${dbb.getDate()}. ${MND[dbb.getMonth()]}`;
+  return `${da.getDate()}. ${MND[da.getMonth()]} – ${dbb.getDate()}. ${MND[dbb.getMonth()]}`;
+}
+function isoUke(s) {
+  const d = fraYmd(s);
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dn = t.getUTCDay() || 7;
+  t.setUTCDate(t.getUTCDate() + 4 - dn);
+  const y0 = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
+  return Math.ceil(((t - y0) / 864e5 + 1) / 7);
+}
+function relDag(s) {
+  const n = dagerMellom(idag(), s);
+  if (n === 0) return "I dag";
+  if (n === 1) return "I morgen";
+  return storF(fmtKortDag(s));
+}
+
+/* ---------- Merkedager (regnes ut på nytt hvert år) ---------- */
+function nteUkedag(y, m, ukedag, n) { // m 1–12, ukedag 0 = søndag
+  const f = new Date(y, m - 1, 1).getDay();
+  return 1 + ((7 + ukedag - f) % 7) + (n - 1) * 7;
+}
+function merkedager(y) {
+  const d = (m, dag) => ymd(new Date(y, m - 1, dag));
+  const tg = nteUkedag(y, 11, 4, 4); // fjerde torsdag i november
+  const farsdag = d(11, nteUkedag(y, 11, 0, 2));
+  const liste = [
+    { slug: "nyttar", navn: "Nyttår", start: d(1, 1), slutt: d(1, 1), lenke: "/nyttar", forvarsel: 5, farge: "#b07d1a" },
+    { slug: "valentinsdag", navn: "Valentinsdag", start: d(2, 14), slutt: d(2, 14), lenke: "/valentinsdag", forvarsel: 7, farge: "#c2185b",
+      markorer: [{ dato: d(2, 10), navn: "Siste bestilling før valentinsdag" }] },
+    { slug: "17-mai", navn: "17. mai", start: d(5, 17), slutt: d(5, 17), lenke: "/17-mai", forvarsel: 7, farge: "#c62828",
+      markorer: [{ dato: d(5, 13), navn: "Siste bestilling før 17. mai" }] },
+    { slug: "world-beard-day", navn: "World Beard Day", start: d(9, nteUkedag(y, 9, 6, 1)), lenke: "/world-beard-day", forvarsel: 7, farge: "#2e7d6b" },
+    { slug: "movember", navn: "Movember", start: d(11, 1), slutt: d(11, 30), lenke: "/movember", forvarsel: 7, farge: "#8d5a3b" },
+    { slug: "farsdag", navn: "Farsdag", start: farsdag, slutt: farsdag, lenke: "/farsdag", forvarsel: 7, farge: "#2f5d8a",
+      markorer: [{ dato: plussDager(farsdag, -4), navn: "Siste bestilling før farsdag" }] },
+    { slug: "black-week", navn: "Black Week", start: d(11, tg - 3), slutt: d(11, tg + 4), lenke: "/black-week", forvarsel: 7, farge: "var(--md-bw)",
+      markorer: [{ dato: d(11, tg + 1), navn: "Black Friday" }, { dato: d(11, tg + 4), navn: "Cyber Monday" }] },
+    { slug: "jul", navn: "Jul", start: d(12, 1), slutt: d(12, 24), lenke: "/julegave", forvarsel: 7, farge: "#a8323e",
+      markorer: [{ dato: d(12, 16), navn: "Siste bestilling før jul" }] },
+  ];
+  return liste.map((m) => ({ ...m, slutt: m.slutt || m.start, aar: y, id: `md-${m.slug}-${y}` }));
+}
+function finnMerkedag(id) {
+  const m = /^md-(.+)-(\d{4})$/.exec(id);
+  return m ? merkedager(+m[2]).find((x) => x.slug === m[1]) : null;
+}
+function paaske(y) {
+  const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4;
+  const f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
+  return new Date(y, Math.floor((h + l - 7 * m + 114) / 31) - 1, ((h + l - 7 * m + 114) % 31) + 1);
+}
+const helligCache = {};
+function helligdager(y) {
+  if (helligCache[y]) return helligCache[y];
+  const p = ymd(paaske(y)), r = {};
+  r[`${y}-01-01`] = "1. nyttårsdag";
+  r[plussDager(p, -7)] = "Palmesøndag";
+  r[plussDager(p, -3)] = "Skjærtorsdag";
+  r[plussDager(p, -2)] = "Langfredag";
+  r[p] = "1. påskedag";
+  r[plussDager(p, 1)] = "2. påskedag";
+  r[`${y}-05-01`] = "1. mai";
+  r[plussDager(p, 39)] = "Kristi himmelfart";
+  r[plussDager(p, 49)] = "1. pinsedag";
+  r[plussDager(p, 50)] = "2. pinsedag";
+  r[`${y}-12-24`] = "Julaften";
+  r[`${y}-12-25`] = "1. juledag";
+  r[`${y}-12-26`] = "2. juledag";
+  r[`${y}-12-31`] = "Nyttårsaften";
+  return (helligCache[y] = r);
+}
+const ROD = new Set(["1. nyttårsdag", "Palmesøndag", "Skjærtorsdag", "Langfredag", "1. påskedag", "2. påskedag", "1. mai", "Kristi himmelfart", "1. pinsedag", "2. pinsedag", "1. juledag", "2. juledag"]);
+
+/* ---------- Tilstand ---------- */
+const innlegg = new Map(); // SoMe-innlegg (samling «innlegg»)
+const oppf = new Map();    // kalenderoppføringer (samling «kalender»)
+let lyttere = [];
+let lastet = { innlegg: false, kalender: false };
+const naa = new Date();
+let aar = naa.getFullYear(), mnd = naa.getMonth();
+let visning = hentLokalt("visning", window.innerWidth < 700 ? "liste" : "maned");
+let filtre = Object.assign({ some: true, nyhetsbrev: true, kampanje: true, blogg: true, notat: true }, hentLokalt("filtre", {}));
+
+/* ---------- SoMe-innlegg ---------- */
+function tidFor(d) {
+  const ts = d.status === "postet" ? (d.postetTid || d.planlagtTid || d.opprettet) : (d.planlagtTid || d.opprettet);
+  return ts && ts.toDate ? ts.toDate() : null;
+}
+function mediaFor(d) {
+  if (d.type === "carousel" && Array.isArray(d.mediaItems)) return d.mediaItems.map((m) => ({ url: m.url, type: m.type || "image" }));
+  const url = d.mediaUrl || d.bildeUrl;
+  return url ? [{ url, type: d.mediaType || "image" }] : [];
+}
+function gruppeDocs(gid) {
+  const ut = [];
+  for (const [id, d] of innlegg) if ((d.gruppeId || id) === gid && d.status !== "avvist") ut.push({ id, d });
+  ut.sort((a, b) => (a.d.plattform || "").localeCompare(b.d.plattform || "") || (a.d.type || "").localeCompare(b.d.type || ""));
+  return ut;
+}
+function plattformIkoner(pl) {
+  return `<span class="pl">${pl.includes("facebook") ? `<span class="fb">${IKON.fb}</span>` : ""}${pl.includes("instagram") ? `<span class="ig">${IKON.ig}</span>` : ""}</span>`;
+}
+function postGrupper() {
+  const g = new Map();
+  for (const [id, d] of innlegg) {
+    if (d.status === "avvist") continue;
+    const gid = d.gruppeId || id;
+    let x = g.get(gid);
+    if (!x) g.set(gid, (x = { gid, docs: [] }));
+    x.docs.push({ id, d });
+  }
+  for (const x of g.values()) {
+    const tider = x.docs.map(({ d }) => tidFor(d)).filter(Boolean).sort((a, b) => a - b);
+    const t = tider[0] || new Date();
+    x.dato = ymd(t);
+    const harTid = x.docs.some(({ d }) => (d.status === "postet" ? d.postetTid || d.planlagtTid : d.planlagtTid));
+    const st = x.docs.map(({ d }) => d.status);
+    x.status = st.includes("feilet") ? "feilet" : st.includes("utkast") ? "utkast" : st.includes("godkjent") ? "godkjent" : "postet";
+    x.tid = harTid ? hhmm(t) : x.status === "godkjent" ? "snart" : "";
+    x.plattformer = [...new Set(x.docs.map(({ d }) => d.plattform))];
+    x.typer = [...new Set(x.docs.map(({ d }) => POST_TYPE[d.type || "feed"] || d.type))];
+    const fbDoc = x.docs.find(({ d }) => d.plattform === "facebook") || x.docs[0];
+    x.tekst = (fbDoc.d.tekst || "").trim();
+    x.media = mediaFor(x.docs[0].d);
+    x.feil = (x.docs.find(({ d }) => d.status === "feilet") || {}).d?.feilmelding || "";
+    const pltekst = x.plattformer.map((p) => (p === "facebook" ? "Facebook" : "Instagram")).join(" og ");
+    const snutt = x.tekst.split("\n")[0].slice(0, 80);
+    const flyttbar = x.docs.some(({ d }) => d.status === "utkast" || d.status === "godkjent");
+    x.item = {
+      kind: "post", label: snutt || x.typer.join(", "), tid: x.tid, farge: `var(--p-${x.status})`,
+      ikon: plattformIkoner(x.plattformer), open: `post:${x.gid}`, drag: flyttbar ? `post:${x.gid}` : null,
+      cls: x.status, meta: `${pltekst} · ${x.typer.join(", ")} · ${POST_STATUS[x.status]}`,
+      sort: x.tid && x.tid !== "snart" ? 6 : 5, thumb: x.media[0] || null, dot: x.status === "utkast" ? "hul" : "",
+    };
+  }
+  return g;
+}
+
+/* ---------- Indeks over hva som skjer hvilken dag ---------- */
+function byggIndeks(fra, til, alle) {
+  const f = alle ? { some: 1, nyhetsbrev: 1, kampanje: 1, blogg: 1, notat: 1 } : filtre;
+  const idx = new Map();
+  const D = (d) => { let x = idx.get(d); if (!x) idx.set(d, (x = { ting: [], perioder: [], hd: null })); return x; };
+  const inn = (d) => d >= fra && d <= til;
+  const perioder = [];
+  const y0 = +fra.slice(0, 4), y1 = +til.slice(0, 4) + 1;
+  for (let y = y0; y <= y1; y++) {
+    for (const [d, n] of Object.entries(helligdager(y))) if (inn(d)) D(d).hd = n;
+    if (!f.kampanje) continue;
+    for (const m of merkedager(y)) {
+      const a = oppf.get(m.id);
+      const ann = a && !a.slettet ? a : null;
+      const ferdig = ann?.status === "ferdig";
+      const sl = ann?.sjekkliste || [];
+      const fremdrift = sl.length ? `${sl.filter((x) => x.ok).length}/${sl.length}` : "";
+      const base = { open: `md:${m.id}`, farge: m.farge };
+      if (m.slutt !== m.start) {
+        perioder.push({ ...base, kind: "merkedag", id: m.id, label: m.navn, start: m.start, slutt: m.slutt, ferdig, etter: fremdrift, ikon: IKON.flagg });
+      } else if (inn(m.start)) {
+        D(m.start).ting.push({ ...base, kind: "merkedag", label: m.navn, ikon: IKON.flagg, cls: ferdig ? "ferdig" : "", etter: fremdrift, sort: 0, meta: `Merkedag${fremdrift ? " · " + fremdrift + " gjort" : ""}` });
+      }
+      for (const mk of m.markorer || []) {
+        if (inn(mk.dato)) D(mk.dato).ting.push({ ...base, kind: "markor", label: mk.navn, ikon: IKON.flagg, sort: 1, meta: m.navn });
+      }
+      const fv = plussDager(m.start, -m.forvarsel);
+      if (!ferdig && inn(fv)) {
+        D(fv).ting.push({ ...base, kind: "forvarsel", label: `${m.navn}: bytt topp`, ikon: IKON.bjelle, sort: 2, meta: `Bytt forsidetopp. ${m.navn} ${fmtKort(m.start)}, om ${m.forvarsel} dager` });
+      }
+    }
+  }
+  for (const [id, o] of oppf) {
+    if (o.slettet || o.merkedag) continue;
+    const T = TYPER[o.type] || TYPER.notat;
+    if (!f[T.filter] || !o.dato) continue;
+    const sl = o.sjekkliste || [];
+    const fremdrift = sl.length ? `${sl.filter((x) => x.ok).length}/${sl.length}` : "";
+    const item = {
+      kind: "oppf", id, label: o.tittel || "Uten tittel", farge: T.farge, ikon: IKON[T.ikon], tid: o.tid || "",
+      open: `oppf:${id}`, drag: `oppf:${id}`, cls: o.status === "ferdig" ? "ferdig" : o.status === "ide" ? "ide" : "",
+      meta: `${T.navn} · ${STATUSER[o.status] || "Planlagt"}${fremdrift ? " · " + fremdrift : ""}`,
+      etter: fremdrift && o.status !== "ferdig" ? fremdrift : "", sort: o.tid ? 6 : 4,
+      thumb: (o.bilder || []).find((b) => b.url) || null,
+    };
+    if (o.tilDato && o.tilDato > o.dato) {
+      if (o.dato <= til && o.tilDato >= fra) perioder.push({ ...item, start: o.dato, slutt: o.tilDato, ferdig: o.status === "ferdig" });
+    } else if (inn(o.dato)) D(o.dato).ting.push(item);
+  }
+  if (f.some) for (const g of postGrupper().values()) if (inn(g.dato)) D(g.dato).ting.push(g.item);
+  for (const p of perioder) {
+    let d = p.start < fra ? fra : p.start;
+    const s = p.slutt > til ? til : p.slutt;
+    while (d <= s) { D(d).perioder.push(p); d = plussDager(d, 1); }
+  }
+  for (const x of idx.values()) {
+    x.ting.sort((a, b) => a.sort - b.sort || (a.tid || "").localeCompare(b.tid || "") || a.label.localeCompare(b.label, "nb"));
+  }
+  idx.perioder = perioder;
+  return idx;
+}
+
+/* ---------- Tegning av elementer ---------- */
+function chipHtml(c) {
+  const dra = c.drag ? ` draggable="true" data-drag="${c.drag}"` : "";
+  return `<button type="button" class="chip k-${c.kind} ${c.cls || ""}" style="--c:${c.farge}" data-open="${c.open}"${dra} title="${esc(c.label + (c.meta ? " – " + c.meta : ""))}">${c.ikon || ""}${c.tid ? `<span class="tid">${esc(c.tid)}</span>` : ""}<span class="tx">${esc(c.label)}</span>${c.etter ? `<span class="etter">${esc(c.etter)}</span>` : ""}</button>`;
+}
+function thumbMini(m) {
+  if (!m) return "";
+  return m.type === "video"
+    ? `<video class="minithumb" src="${esc(m.url)}#t=0.1" muted playsinline preload="metadata"></video>`
+    : `<img class="minithumb" src="${esc(m.url)}" alt="" loading="lazy">`;
+}
+function radHtml(it, ekstraMeta) {
+  const meta = ekstraMeta || it.meta;
+  return `<button type="button" class="rad k-${it.kind} ${it.cls || ""}" style="--c:${it.farge}" data-open="${it.open}">${it.thumb ? thumbMini(it.thumb) : `<span class="radikon">${it.ikon || ""}</span>`}<span class="radtekst"><span class="radtittel">${it.tid ? `<b>${esc(it.tid)}</b> · ` : ""}${esc(it.label)}</span>${meta ? `<span class="meta">${esc(meta)}</span>` : ""}</span></button>`;
+}
+
+function rutenett(y, m) {
+  const off = (new Date(y, m, 1).getDay() + 6) % 7;
+  const dim = new Date(y, m + 1, 0).getDate();
+  const uker = Math.ceil((off + dim) / 7);
+  const ut = [];
+  for (let i = 0; i < uker * 7; i++) ut.push(ymd(new Date(y, m, 1 - off + i)));
+  return ut;
+}
+
+function tegnManed() {
+  const dager = rutenett(aar, mnd);
+  const fra = dager[0], til = dager[dager.length - 1];
+  const idx = byggIndeks(fra, til);
+  const dIdag = idag();
+  const smal = window.innerWidth < 700;
+  const MAKS = 4;
+  let html = `<div class="mnd"><div class="mnd-hode"><div class="uk">Uke</div>${["Man", "Tir", "Ons", "Tor", "Fre", "Lør", "Søn"].map((d) => `<div>${d}</div>`).join("")}</div>`;
+  for (let w = 0; w < dager.length / 7; w++) {
+    const uke = dager.slice(w * 7, w * 7 + 7);
+    const w0 = uke[0], w6 = uke[6];
+    // Fordel perioder på faste rader innen uken, så stripene står på linje
+    const ps = idx.perioder.filter((p) => p.start <= w6 && p.slutt >= w0)
+      .sort((a, b) => a.start.localeCompare(b.start) || b.slutt.localeCompare(a.slutt));
+    const plass = new Map(), sluttPaa = [];
+    for (const p of ps) {
+      let s = sluttPaa.findIndex((e) => e < p.start);
+      if (s === -1) { s = sluttPaa.length; sluttPaa.push(p.slutt); } else sluttPaa[s] = p.slutt;
+      plass.set(p, s);
+    }
+    html += `<div class="uke"><div class="ukenr">${isoUke(w0)}</div>`;
+    for (const d of uke) {
+      const x = idx.get(d) || { ting: [], perioder: [], hd: null };
+      const dt = fraYmd(d);
+      const cls = ["dag"];
+      if (dt.getMonth() !== mnd) cls.push("annen");
+      if (d === dIdag) cls.push("idag");
+      if (dt.getDay() === 0 || ROD.has(x.hd)) cls.push("rod");
+      let striper = "";
+      for (let s = 0; s < sluttPaa.length; s++) {
+        const p = ps.find((q) => plass.get(q) === s && q.start <= d && q.slutt >= d);
+        if (!p) { striper += `<span class="stripe tom"></span>`; continue; }
+        const sc = ["stripe"];
+        if (p.start === d) sc.push("start");
+        if (p.slutt === d) sc.push("slutt");
+        if (p.ferdig) sc.push("ferdig");
+        const vis = p.start === d || d === w0;
+        const dra = p.drag ? ` draggable="true" data-drag="${p.drag}"` : "";
+        striper += `<button type="button" class="${sc.join(" ")}" style="--c:${p.farge}" data-open="${p.open}"${dra} title="${esc(p.label)} (${fmtPeriode(p.start, p.slutt)})">${vis ? esc(p.label) + (p.etter ? " · " + esc(p.etter) : "") : "&nbsp;"}</button>`;
+      }
+      const synlige = x.ting.slice(0, MAKS);
+      const rest = x.ting.length - synlige.length;
+      const prikker = x.ting.slice(0, 5).map((t) => `<i class="${t.dot || ""}" style="--c:${t.farge}"></i>`).join("");
+      html += `<div class="${cls.join(" ")}" data-dato="${d}" tabindex="0" role="button" aria-label="${esc(fmtDag(d))}${x.ting.length ? ", " + x.ting.length + " ting" : ""}">
+        <div class="dag-hode"><span class="nr">${dt.getDate()}</span>${x.hd ? `<span class="hd">${esc(x.hd)}</span>` : ""}</div>
+        ${striper ? `<div class="striper">${striper}</div>` : ""}
+        <div class="chips">${synlige.map(chipHtml).join("")}${rest > 0 ? `<button type="button" class="mer" data-dag="${d}">+${rest} til</button>` : ""}</div>
+        ${prikker ? `<div class="prikker">${prikker}</div>` : ""}
+      </div>`;
+    }
+    html += `</div>`;
+  }
+  html += `</div>`;
+  html += `<div class="forklaring">
+    <span><i style="background:linear-gradient(90deg,#8d5a3b 33%,#2f5d8a 33% 66%,#a8323e 66%)"></i>Merkedager</span>
+    <span><i style="--c:var(--t-some)"></i>SoMe-plan</span>
+    <span><i style="--c:var(--t-nyhetsbrev)"></i>Nyhetsbrev</span>
+    <span><i style="--c:var(--t-kampanje)"></i>Kampanje</span>
+    <span><i style="--c:var(--t-blogg)"></i>Blogg/nettside</span>
+    <span><i style="--c:var(--t-notat)"></i>Notat</span>
+    <span>Innlegg:</span>
+    <span><i class="strek" style="--c:var(--p-utkast)"></i>utkast</span>
+    <span><i style="--c:var(--p-godkjent)"></i>planlagt</span>
+    <span><i style="--c:var(--p-postet)"></i>postet</span>
+    <span><i style="--c:var(--p-feilet)"></i>feilet</span>
+  </div>`;
+  $("#maned").innerHTML = html;
+}
+
+function tegnListe() {
+  const fra = `${aar}-${pad(mnd + 1)}-01`, til = ymd(new Date(aar, mnd + 1, 0));
+  const idx = byggIndeks(fra, til);
+  const dIdag = idag();
+  let html = "";
+  for (let d = fra; d <= til; d = plussDager(d, 1)) {
+    const x = idx.get(d);
+    if (!x) continue;
+    const ps = x.perioder.filter((p) => p.start === d || (d === fra && p.start < fra));
+    if (!ps.length && !x.ting.length) continue;
+    html += `<section class="listedag ${d === dIdag ? "idag" : ""}"><h4><button type="button" data-dag="${d}">${esc(storF(fmtDag(d)))}${d === dIdag ? " · i dag" : ""}${x.hd ? ` · <span class="hd">${esc(x.hd)}</span>` : ""}</button></h4><div class="rader">`;
+    html += ps.map((p) => radHtml(p, `${p.start < fra ? "Pågår · " : ""}${fmtPeriode(p.start, p.slutt)}${p.etter ? " · " + p.etter + " gjort" : ""}`)).join("");
+    html += x.ting.map((t) => radHtml(t)).join("");
+    html += `</div></section>`;
+  }
+  if (!html) html = `<p class="tom">Ingenting planlagt i ${MND[mnd]} ennå. Trykk «+ Ny», eller bytt til månedsvisning og trykk på en dag.</p>`;
+  $("#liste").innerHTML = html;
+}
+
+function tegnSide() {
+  const d0 = idag(), d1 = plussDager(d0, 13);
+  const idx = byggIndeks(d0, d1, true);
+  const grupper = [...postGrupper().values()];
+  const feilet = grupper.filter((g) => g.status === "feilet").sort((a, b) => b.dato.localeCompare(a.dato));
+  const utkast = grupper.filter((g) => g.status === "utkast").sort((a, b) => a.dato.localeCompare(b.dato));
+  let h = "";
+  if (feilet.length) {
+    h += `<div class="boks varsel"><h3>${IKON.utropstegn}Feilet (${feilet.length})</h3><div class="rader">${feilet.slice(0, 5).map((g) => radHtml(g.item, `${fmtKort(g.dato)} · ${g.feil || "Ukjent feil"}`)).join("")}</div></div>`;
+  }
+  if (utkast.length) {
+    h += `<div class="boks"><h3>Venter på godkjenning (${utkast.length})</h3><div class="rader">${utkast.slice(0, 5).map((g) => radHtml(g.item, `${fmtKort(g.dato)} · ${g.item.meta}`)).join("")}</div>${utkast.length > 5 ? `<p class="hint" style="margin-top:8px"><a href="./">Se alle i innleggskøen</a></p>` : ""}</div>`;
+  }
+  let neste = "";
+  for (let d = d0; d <= d1; d = plussDager(d, 1)) {
+    const x = idx.get(d);
+    if (!x) continue;
+    const ps = x.perioder.filter((p) => p.start === d || (d === d0 && p.start < d0));
+    const ting = x.ting.filter((t) => !(t.kind === "post" && t.cls === "postet"));
+    if (!ps.length && !ting.length) continue;
+    neste += `<div class="sidedag">${esc(relDag(d))}</div><div class="rader">${ps.map((p) => radHtml(p, `${p.start < d0 ? "Pågår til " + fmtKort(p.slutt) : fmtPeriode(p.start, p.slutt)}`)).join("")}${ting.map((t) => radHtml(t)).join("")}</div>`;
+  }
+  const harSome = grupper.some((g) => (g.status === "godkjent" || g.status === "utkast") && g.dato >= d0 && g.dato <= plussDager(d0, 6));
+  h += `<div class="boks neste"><h3>${IKON.kalender}De neste 14 dagene</h3>${neste || `<p class="hint">Ingenting planlagt de neste 14 dagene.</p>`}${!harSome && lastet.innlegg ? `<div class="dytt">Ingen SoMe-innlegg er planlagt de neste 7 dagene.</div>` : ""}</div>`;
+  $("#side").innerHTML = h;
+}
+
+function tegnFiltre() {
+  $("#filtre").innerHTML = Object.entries(FILTRE).map(([k, f]) =>
+    `<button type="button" class="filter ${filtre[k] ? "" : "av"}" data-filter="${k}" style="--c:${f.farge}" aria-pressed="${!!filtre[k]}"><i></i>${f.navn}</button>`).join("");
+}
+
+function tegn() {
+  $("#mndTittel").textContent = `${storF(MND[mnd])} ${aar}`;
+  $$(".segment button").forEach((b) => b.classList.toggle("paa", b.dataset.visning === visning));
+  $("#maned").hidden = visning !== "maned";
+  $("#liste").hidden = visning !== "liste";
+  document.body.classList.toggle("v-liste", visning === "liste");
+  if (visning === "maned") tegnManed(); else tegnListe();
+  tegnSide();
+  oppdaterPanel();
+}
+
+/* ---------- Navigasjon og hendelser i hovedvisningen ---------- */
+function gaaTilMnd(y, m) {
+  const d = new Date(y, m, 1);
+  aar = d.getFullYear(); mnd = d.getMonth();
+  history.replaceState(null, "", `#${aar}-${pad(mnd + 1)}`);
+  tegn();
+}
+(function lesHash() {
+  const m = /^#(\d{4})-(\d{2})$/.exec(location.hash);
+  if (m) { aar = +m[1]; mnd = +m[2] - 1; }
+})();
+
+$("#forrige").innerHTML = IKON.venstre;
+$("#neste").innerHTML = IKON.hoyre;
+$("#pTilbake").innerHTML = IKON.venstre;
+$("#pLukk").innerHTML = IKON.lukk;
+$("#nyBtn").innerHTML = `${IKON.pluss}Ny`;
+$("#appleBtn").innerHTML = `${IKON.kalender}<span>Apple-kalender</span>`;
+$("#forrige").onclick = () => gaaTilMnd(aar, mnd - 1);
+$("#neste").onclick = () => gaaTilMnd(aar, mnd + 1);
+$("#idagBtn").onclick = () => { const n = new Date(); gaaTilMnd(n.getFullYear(), n.getMonth()); };
+$$(".segment button").forEach((b) => (b.onclick = () => { visning = b.dataset.visning; lagreLokalt("visning", visning); tegn(); }));
+$("#filtre").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-filter]");
+  if (!b) return;
+  filtre[b.dataset.filter] = !filtre[b.dataset.filter];
+  lagreLokalt("filtre", filtre);
+  tegnFiltre();
+  tegn();
+});
+$("#nyBtn").onclick = () => {
+  const d = idag();
+  const vist = `${aar}-${pad(mnd + 1)}`;
+  aapne({ type: "dag", dato: d.startsWith(vist) ? d : `${vist}-01` });
+};
+$("#appleBtn").onclick = () => aapne({ type: "apple" });
+document.addEventListener("keydown", (e) => {
+  if ($("#panel").open || /input|textarea|select/i.test(e.target.tagName)) return;
+  if (e.key === "ArrowLeft") gaaTilMnd(aar, mnd - 1);
+  if (e.key === "ArrowRight") gaaTilMnd(aar, mnd + 1);
+});
+
+function aapneFraData(v) {
+  const [k, ...rest] = v.split(":");
+  const id = rest.join(":");
+  if (k === "oppf") aapne({ type: "oppf", id });
+  else if (k === "post") aapne({ type: "post", gid: id });
+  else if (k === "md") aapne({ type: "md", id });
+}
+function klikkIHoved(e) {
+  const o = e.target.closest("[data-open]");
+  if (o) { aapneFraData(o.dataset.open); return; }
+  const m = e.target.closest("[data-dag]");
+  if (m) { aapne({ type: "dag", dato: m.dataset.dag }); return; }
+  const d = e.target.closest(".dag[data-dato]");
+  if (d) aapne({ type: "dag", dato: d.dataset.dato });
+}
+$("#maned").addEventListener("click", klikkIHoved);
+$("#liste").addEventListener("click", klikkIHoved);
+$("#side").addEventListener("click", klikkIHoved);
+$("#maned").addEventListener("keydown", (e) => {
+  if ((e.key === "Enter" || e.key === " ") && e.target.matches(".dag[data-dato]")) {
+    e.preventDefault();
+    aapne({ type: "dag", dato: e.target.dataset.dato });
+  }
+});
+
+/* ---------- Dra og slipp (flytte til en annen dag) ---------- */
+let draNaa = null;
+$("#maned").addEventListener("dragstart", (e) => {
+  const el = e.target.closest("[data-drag]");
+  if (!el) return;
+  draNaa = el.dataset.drag;
+  e.dataTransfer.effectAllowed = "move";
+  e.dataTransfer.setData("text/plain", draNaa);
+  requestAnimationFrame(() => el.classList.add("dra"));
+});
+$("#maned").addEventListener("dragend", () => { draNaa = null; $$(".dag.drop, .dra").forEach((x) => x.classList.remove("drop", "dra")); });
+$("#maned").addEventListener("dragover", (e) => {
+  if (!draNaa) return;
+  const d = e.target.closest(".dag[data-dato]");
+  if (!d) return;
+  e.preventDefault();
+  $$(".dag.drop").forEach((x) => x !== d && x.classList.remove("drop"));
+  d.classList.add("drop");
+});
+$("#maned").addEventListener("drop", (e) => {
+  const d = e.target.closest(".dag[data-dato]");
+  if (!d || !draNaa) return;
+  e.preventDefault();
+  const payload = draNaa;
+  draNaa = null;
+  d.classList.remove("drop");
+  flytt(payload, d.dataset.dato).catch(visSkrivefeil);
+});
+async function flytt(payload, nyDato) {
+  const [k, ...rest] = payload.split(":");
+  const id = rest.join(":");
+  if (k === "oppf") {
+    const o = oppf.get(id);
+    if (!o || o.dato === nyDato) return;
+    const upd = { dato: nyDato, endret: FV.serverTimestamp() };
+    if (o.tilDato) upd.tilDato = plussDager(o.tilDato, dagerMellom(o.dato, nyDato));
+    await db.collection("kalender").doc(id).update(upd);
+    toast(`Flyttet til ${fmtDag(nyDato)}`, { angre: () => db.collection("kalender").doc(id).update({ dato: o.dato, tilDato: o.tilDato || "" }) });
+  } else if (k === "post") {
+    const docs = gruppeDocs(id).filter(({ d }) => d.status === "utkast" || d.status === "godkjent");
+    if (!docs.length) return;
+    const nye = docs.map(({ id: did, d }) => {
+      const t = d.planlagtTid ? hhmm(d.planlagtTid.toDate()) : "19:00";
+      return { did, gammel: d.planlagtTid || null, ny: new Date(`${nyDato}T${t}`), godkjent: d.status === "godkjent" };
+    });
+    if (nye.some((n) => n.godkjent && n.ny < new Date())) {
+      toast("Et planlagt innlegg kan ikke flyttes til et tidspunkt som har vært. Åpne det for å poste nå.");
+      return;
+    }
+    const b = db.batch();
+    nye.forEach((n) => b.update(db.collection("innlegg").doc(n.did), { planlagtTid: TS.fromDate(n.ny) }));
+    await b.commit();
+    toast(`Innlegget er flyttet til ${fmtDag(nyDato)} kl. ${hhmm(nye[0].ny)}`, {
+      angre: () => { const bb = db.batch(); nye.forEach((n) => bb.update(db.collection("innlegg").doc(n.did), { planlagtTid: n.gammel })); return bb.commit(); },
+    });
+  }
+}
+
+/* ---------- Toast og feil ---------- */
+let toastTimer = null;
+function toast(tekst, { angre } = {}) {
+  $$(".toast").forEach((t) => t.remove());
+  const t = document.createElement("div");
+  t.className = "toast";
+  t.setAttribute("role", "status");
+  t.innerHTML = `<span>${esc(tekst)}</span>`;
+  if (angre) {
+    const b = document.createElement("button");
+    b.textContent = "Angre";
+    b.onclick = () => { t.remove(); Promise.resolve(angre()).catch(visSkrivefeil); };
+    t.appendChild(b);
+  }
+  (dlg.open ? dlg : document.body).appendChild(t);
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.remove(), angre ? 6500 : 4000);
+}
+function visSkrivefeil(err) {
+  console.error(err);
+  if (err && err.code === "permission-denied") visTilgangsfeil("kalender");
+  toast("Noe gikk galt: " + (err && err.message ? err.message : err));
+}
+function visTilgangsfeil(samling) {
+  const b = $("#feilbanner");
+  b.hidden = false;
+  b.innerHTML = samling === "kalender"
+    ? `<b>Kalenderen får ikke lese eller lagre oppføringer ennå.</b> Firestore-reglene i Firebase må også gi innloggede brukere tilgang til samlingen <code>kalender</code>. SoMe-innleggene virker som før. Se instruksjonen fra Claude.`
+    : `<b>Får ikke lest innleggene.</b> Sjekk at du er logget inn med riktig bruker.`;
+}
+
+/* ---------- Panelet («den store ruten») ---------- */
+const dlg = $("#panel");
+let stakk = [];
+let skitten = false;
+let musNedPaa = null;
+function aapne(vis) {
+  if (!dlg.open) {
+    stakk = [];
+    dlg.showModal();
+    document.body.classList.add("laast");
+  } else if (skitten) {
+    if (!confirm("Du har endringer som ikke er lagret. Forkaste dem?")) return;
+    delete stakk[stakk.length - 1].tilstand;
+  }
+  stakk.push(vis);
+  skitten = false;
+  tegnPanel();
+}
+function erstattPanel(vis) { stakk.pop(); stakk.push(vis); skitten = false; tegnPanel(); }
+function tilbake(tvang) {
+  if (!tvang && skitten && !confirm("Du har endringer som ikke er lagret. Forkaste dem?")) return;
+  skitten = false;
+  stakk.pop();
+  if (!stakk.length) { lukk(true); return; }
+  tegnPanel();
+}
+function lukk(tvang) {
+  if (!tvang && skitten && !confirm("Du har endringer som ikke er lagret. Forkaste dem?")) return;
+  skitten = false;
+  stakk = [];
+  dlg.close();
+  document.body.classList.remove("laast");
+}
+function ferdigLagret() { skitten = false; if (stakk.length > 1) tilbake(true); else lukk(true); }
+dlg.addEventListener("cancel", (e) => { e.preventDefault(); lukk(); });
+dlg.addEventListener("mousedown", (e) => (musNedPaa = e.target));
+dlg.addEventListener("click", (e) => { if (e.target === dlg && musNedPaa === dlg) lukk(); });
+$("#pLukk").onclick = () => lukk();
+$("#pTilbake").onclick = () => tilbake();
+$("#pInnhold").addEventListener("input", (e) => { if (!e.target.closest("[data-ikke-skitten]")) skitten = true; });
+$("#pInnhold").addEventListener("click", (e) => {
+  const o = e.target.closest("[data-open]");
+  if (o && !o.closest("form")) { e.preventDefault(); aapneFraData(o.dataset.open); }
+});
+
+function tegnPanel() {
+  const v = stakk[stakk.length - 1];
+  $("#pTilbake").hidden = stakk.length < 2;
+  const inn = $("#pInnhold"), fot = $("#pFot");
+  inn.innerHTML = "";
+  fot.innerHTML = "";
+  fot.hidden = true;
+  inn.scrollTop = 0;
+  const f = { dag: panelDag, oppf: panelOppf, post: panelPost, nyPost: panelNyPost, md: panelMd, apple: panelApple }[v.type];
+  f(v, inn, fot);
+}
+function oppdaterPanel() {
+  if (!dlg.open || skitten) return;
+  const v = stakk[stakk.length - 1];
+  if (v && ((v.type === "oppf" && !v.ny) || v.type === "md")) delete v.tilstand;
+  if (v && (v.type === "dag" || v.type === "post" || (v.type === "oppf" && !v.ny) || v.type === "md")) {
+    const st = $("#pInnhold").scrollTop;
+    tegnPanel();
+    $("#pInnhold").scrollTop = st;
+  }
+}
+function tittel(t) { $("#pTittel").textContent = t; }
+function knapp(tekst, cls, fn) {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = "knapp " + (cls || "");
+  b.innerHTML = tekst;
+  b.onclick = async () => {
+    if (b.disabled) return;
+    b.disabled = true;
+    try { await fn(b); } catch (err) { visSkrivefeil(err); } finally { b.disabled = false; }
+  };
+  return b;
+}
+function fotMed(fot, venstre, hoyre) {
+  fot.hidden = false;
+  venstre.forEach((b) => b && fot.appendChild(b));
+  const s = document.createElement("div");
+  s.className = "fyll";
+  fot.appendChild(s);
+  hoyre.forEach((b) => b && fot.appendChild(b));
+}
+function autoHoyde(root) {
+  $$("textarea", root).forEach((t) => {
+    const f = () => { t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight + 2, 520) + "px"; };
+    t.addEventListener("input", f);
+    requestAnimationFrame(f);
+  });
+}
+
+/* ----- Dagpanel ----- */
+function panelDag({ dato }, inn) {
+  tittel(storF(fmtDag(dato)));
+  const x = byggIndeks(dato, dato, true).get(dato) || { ting: [], perioder: [], hd: null };
+  let h = `<p class="p-meta">Uke ${isoUke(dato)}${x.hd ? ` · <span class="hd">${esc(x.hd)}</span>` : ""}</p>`;
+  if (x.perioder.length || x.ting.length) {
+    h += `<div class="seksjon"><div class="rader">`;
+    h += x.perioder.map((p) => radHtml(p, `${fmtPeriode(p.start, p.slutt)}${p.etter ? " · " + p.etter + " gjort" : ""}`)).join("");
+    h += x.ting.map((t) => radHtml(t)).join("");
+    h += `</div></div>`;
+  } else {
+    h += `<p class="hint">Ingenting planlagt denne dagen ennå.</p>`;
+  }
+  h += `<div class="seksjon"><h3>Legg til</h3><div class="leggtil-knapper">
+    <button type="button" class="lt" style="--c:var(--ig)" data-ny="post">${IKON.ig}SoMe-innlegg</button>
+    ${TYPE_REKKEFOLGE.map((t) => `<button type="button" class="lt" style="--c:${TYPER[t].farge}" data-ny="${t}">${IKON[TYPER[t].ikon]}${TYPER[t].navn}</button>`).join("")}
+  </div><p class="hint" style="margin-top:8px">«SoMe-innlegg» legges rett i køen og postes til Facebook og Instagram. «SoMe-plan» er en idé du vil huske på.</p></div>`;
+  inn.innerHTML = h;
+  inn.querySelectorAll("[data-ny]").forEach((b) => (b.onclick = () => {
+    const t = b.dataset.ny;
+    if (t === "post") aapne({ type: "nyPost", dato });
+    else aapne({ type: "oppf", ny: { type: t, dato } });
+  }));
+}
+
+/* ----- Opplasting ----- */
+function velgFiler() {
+  return new Promise((resolve) => {
+    const inp = $("#filvelger");
+    inp.value = "";
+    inp.onchange = () => resolve(Array.from(inp.files || []));
+    inp.click();
+  });
+}
+function sjekkFil(fil) {
+  const erVideo = fil.type.startsWith("video/"), erBilde = fil.type.startsWith("image/");
+  if (!erVideo && !erBilde) return `«${fil.name}» er verken bilde eller video.`;
+  if (/heic|heif/i.test(fil.type) || /\.hei[cf]$/i.test(fil.name)) return `«${fil.name}» er HEIC. Facebook og Instagram godtar ikke det. Eksporter bildet som JPG først.`;
+  const maks = erVideo ? MAKS_VIDEO : MAKS_BILDE;
+  if (fil.size > maks) return `«${fil.name}» er for stor (maks ${Math.round(maks / 1048576)} MB for ${erVideo ? "video" : "bilde"}).`;
+  return "";
+}
+async function lastOpp(fil, paaFremdrift) {
+  const erVideo = fil.type.startsWith("video/");
+  const mappe = erVideo ? "innlegg-videoer" : "innlegg-bilder";
+  const trygt = fil.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+  const sti = `${mappe}/${Date.now()}-${Math.random().toString(36).slice(2, 6)}-${trygt}`;
+  const ref = storage.ref(sti);
+  const oppgave = ref.put(fil, { contentType: fil.type });
+  oppgave.on("state_changed", (s) => paaFremdrift && paaFremdrift(Math.round((s.bytesTransferred / s.totalBytes) * 100)));
+  await oppgave;
+  const url = await ref.getDownloadURL();
+  return { url, type: erVideo ? "video" : "image", navn: fil.name };
+}
+/* Felles bildeboks: liste = array av {url,type,navn} eller {laster,prosent,navn} */
+async function leggTilMedia(liste, maks, rerender) {
+  const filer = await velgFiler();
+  if (!filer.length) return;
+  const plass = maks - liste.filter((m) => !m.feil).length;
+  if (filer.length > plass) { toast(`Du kan ha maks ${maks} bilder/videoer.`); return; }
+  for (const fil of filer) {
+    const feil = sjekkFil(fil);
+    if (feil) { toast(feil); return; }
+  }
+  skitten = true;
+  await Promise.all(filer.map(async (fil) => {
+    const plassholder = { laster: true, prosent: 0, navn: fil.name, type: fil.type.startsWith("video/") ? "video" : "image" };
+    liste.push(plassholder);
+    rerender();
+    try {
+      const m = await lastOpp(fil, (p) => {
+        plassholder.prosent = p;
+        const el = document.querySelector(`[data-laster="${CSS.escape(fil.name)}"]`);
+        if (el) el.textContent = p + " %";
+      });
+      Object.assign(plassholder, m, { laster: false });
+      delete plassholder.prosent;
+    } catch (err) {
+      liste.splice(liste.indexOf(plassholder), 1);
+      toast(`Kunne ikke laste opp «${fil.name}»: ${err.message || err}`);
+    }
+    rerender();
+  }));
+}
+function thumbsHtml(liste, { fjernbar = true, advarsler = {} } = {}) {
+  return liste.map((m, i) => `<div class="thumb">
+    ${m.laster ? `<div class="laster" data-laster="${esc(m.navn)}">${m.prosent || 0} %</div>` :
+      m.type === "video" ? `<video src="${esc(m.url)}#t=0.1" muted playsinline preload="metadata"></video><span class="merk">Video</span>` :
+      `<img src="${esc(m.url)}" alt="${esc(m.navn || "")}" data-i="${i}">`}
+    ${fjernbar && !m.laster ? `<button type="button" class="fjern" data-fjern="${i}" aria-label="Fjern">${IKON.lukk}</button>` : ""}
+    ${advarsler[i] ? `<div class="advarsel">${esc(advarsler[i])}</div>` : ""}
+  </div>`).join("");
+}
+
+/* ----- Oppføring (nyhetsbrev, kampanje, blogg, notat, SoMe-plan) ----- */
+function panelOppf(v, inn, fot) {
+  const ny = !!v.ny;
+  const id = v.id || (v.idNy = v.idNy || db.collection("kalender").doc().id);
+  const kilde = ny ? null : oppf.get(id);
+  if (!ny && (!kilde || kilde.slettet)) { tittel("Oppføring"); inn.innerHTML = `<p class="tom">Denne oppføringen finnes ikke lenger.</p>`; return; }
+  const type0 = ny ? v.ny.type : kilde.type;
+  const s = v.tilstand || (v.tilstand = ny ? {
+    type: type0, tittel: v.ny.tittel || "", dato: v.ny.dato, tid: "", tilDato: "", status: "planlagt",
+    tekst: v.ny.tekst || "", emne: "", forhandstekst: "", rabattkode: "", lenke: v.ny.lenke || "",
+    sjekkliste: (TYPER[type0] || TYPER.notat).mal.map((t) => ({ t, ok: false })), bilder: [], varsel: "ingen",
+  } : Object.assign({ tid: "", tilDato: "", status: "planlagt", tekst: "", emne: "", forhandstekst: "", rabattkode: "", lenke: "", sjekkliste: [], bilder: [], varsel: "ingen" }, kopi(kilde)));
+
+  function tegnSkjema() {
+    const T = TYPER[s.type] || TYPER.notat;
+    tittel(ny ? `Ny: ${T.navn.toLowerCase()}` : T.navn);
+    const koblede = [...postGrupper().values()].filter((g) => g.docs.some(({ d }) => d.kalenderId === id));
+    const st = inn.scrollTop;
+    inn.innerHTML = `
+      <div class="stabel">
+        <div class="rutenett">
+          <label class="felt">Type<select data-k="type">${TYPE_REKKEFOLGE.map((t) => `<option value="${t}" ${t === s.type ? "selected" : ""}>${TYPER[t].navn}</option>`).join("")}</select></label>
+          <label class="felt">Status<select data-k="status">${Object.entries(STATUSER).map(([k, n]) => `<option value="${k}" ${k === s.status ? "selected" : ""}>${n}</option>`).join("")}</select></label>
+        </div>
+        ${T.hint ? `<p class="hint">${esc(T.hint)}</p>` : ""}
+        <label class="felt tittelfelt">Tittel<input data-k="tittel" value="${esc(s.tittel)}" placeholder="${s.type === "nyhetsbrev" ? "F.eks. Oktobermail – Haust" : "Hva handler det om?"}"></label>
+        <div class="rutenett">
+          <label class="felt">Dato<input type="date" data-k="dato" value="${esc(s.dato)}" required></label>
+          <label class="felt">Klokkeslett (valgfritt)<input type="time" data-k="tid" value="${esc(s.tid)}"></label>
+          <label class="felt">Til og med (valgfritt)<input type="date" data-k="tilDato" value="${esc(s.tilDato)}" min="${esc(s.dato)}"></label>
+        </div>
+        ${s.type === "nyhetsbrev" ? `
+          <label class="felt">Emnelinje<input data-k="emne" value="${esc(s.emne)}" placeholder="Det folk ser i innboksen"></label>
+          <div class="rutenett">
+            <label class="felt">Forhåndstekst<input data-k="forhandstekst" value="${esc(s.forhandstekst)}" placeholder="Teksten etter emnet"></label>
+            <label class="felt">Rabattkode<input data-k="rabattkode" value="${esc(s.rabattkode)}" placeholder="F.eks. haust"></label>
+          </div>` : ""}
+        ${s.type === "kampanje" ? `
+          <div class="rutenett">
+            <label class="felt">Rabattkode<input data-k="rabattkode" value="${esc(s.rabattkode)}"></label>
+            <label class="felt">Landingsside / lenke<input type="url" data-k="lenke" value="${esc(s.lenke)}" placeholder="https://www.graabein-skjegg.no/..."></label>
+          </div>` : ""}
+        ${s.type === "blogg" ? `<label class="felt">Lenke<input type="url" data-k="lenke" value="${esc(s.lenke)}" placeholder="https://www.graabein-skjegg.no/..."></label>` : ""}
+        ${s.lenke && /^https?:\/\//.test(s.lenke) ? `<p class="hint"><a href="${esc(s.lenke)}" target="_blank" rel="noopener">Åpne lenken ${IKON.ekstern.replace('class="ik"', 'class="ik" style="display:inline;vertical-align:-2px"')}</a></p>` : ""}
+        <label class="felt">${s.type === "nyhetsbrev" ? "Tekst og innhold" : s.type === "some" ? "Tekst til innlegget / idé" : "Tekst og notater"}<textarea data-k="tekst" placeholder="Skriv fritt …">${esc(s.tekst)}</textarea></label>
+      </div>
+
+      <div class="seksjon"><h3>Sjekkliste</h3>
+        <div id="sjekkliste">${s.sjekkliste.map((x, i) => `<div class="sjekk ${x.ok ? "ok" : ""}"><input type="checkbox" data-sjekk="${i}" ${x.ok ? "checked" : ""} aria-label="Ferdig"><input class="t" data-sjekktekst="${i}" value="${esc(x.t)}"><button type="button" class="knapp ikonknapp stille x" data-sjekkfjern="${i}" aria-label="Fjern punkt">${IKON.lukk}</button></div>`).join("")}</div>
+        <div class="nysjekk"><input class="inp" id="nySjekk" placeholder="Nytt punkt …" data-ikke-skitten><button type="button" class="knapp" id="nySjekkBtn">Legg til</button></div>
+      </div>
+
+      <div class="seksjon"><h3>Bilder og video</h3>
+        <div class="thumbs">${thumbsHtml(s.bilder)}<button type="button" class="leggtil" id="leggTilBilde">${IKON.pluss}<span>Legg til</span></button></div>
+      </div>
+
+      <div class="seksjon"><h3>SoMe</h3>
+        ${koblede.length ? `<div class="rader" style="margin-bottom:10px">${koblede.map((g) => radHtml(g.item, `${fmtKort(g.dato)}${g.tid ? " kl. " + g.tid : ""} · ${g.item.meta}`)).join("")}</div>` : ""}
+        <button type="button" class="knapp" id="lagInnlegg">${IKON.ig}Lag SoMe-innlegg av dette</button>
+        <p class="hint" style="margin-top:6px">Tar med bildene og teksten herfra. Du velger plattform, format og tidspunkt før det går i køen.</p>
+      </div>
+
+      <div class="seksjon"><h3>Påminnelse</h3>
+        <div class="rutenett" style="align-items:end">
+          <label class="felt">Varsel<select data-k="varsel">${Object.entries(VARSLER).map(([k, n]) => `<option value="${k}" ${k === s.varsel ? "selected" : ""}>${n}</option>`).join("")}</select></label>
+          <button type="button" class="knapp" id="tilApple">${IKON.kalender}Legg i Apple-kalender</button>
+        </div>
+        <p class="hint" style="margin-top:6px">Legger oppføringen i kalenderen på Mac eller iPhone, med varsel.</p>
+      </div>
+      ${!ny && kilde.opprettet && kilde.opprettet.toDate ? `<p class="hint" style="margin-top:20px">Opprettet ${esc(kilde.opprettet.toDate().toLocaleString("nb-NO", { dateStyle: "medium", timeStyle: "short" }))}${kilde.endret && kilde.endret.toDate ? ` · endret ${esc(kilde.endret.toDate().toLocaleString("nb-NO", { dateStyle: "medium", timeStyle: "short" }))}` : ""}</p>` : ""}
+    `;
+    inn.scrollTop = st;
+    autoHoyde(inn);
+    bindSkjema();
+  }
+
+  function bindSkjema() {
+    inn.querySelectorAll("[data-k]").forEach((el) => {
+      const k = el.dataset.k;
+      el.addEventListener(el.tagName === "SELECT" ? "change" : "input", () => {
+        s[k] = el.value;
+        if (k === "type") {
+          if (!s.sjekkliste.length || s.sjekkliste.every((x) => !x.ok && Object.values(TYPER).some((T) => T.mal.includes(x.t)))) {
+            s.sjekkliste = (TYPER[s.type] || TYPER.notat).mal.map((t) => ({ t, ok: false }));
+          }
+          tegnSkjema();
+        }
+        if (k === "dato") { const td = $("[data-k=tilDato]", inn); if (td) td.min = s.dato; }
+      });
+    });
+    inn.querySelectorAll("[data-sjekk]").forEach((el) => (el.onchange = () => {
+      s.sjekkliste[+el.dataset.sjekk].ok = el.checked;
+      el.closest(".sjekk").classList.toggle("ok", el.checked);
+      skitten = true;
+    }));
+    inn.querySelectorAll("[data-sjekktekst]").forEach((el) => (el.oninput = () => { s.sjekkliste[+el.dataset.sjekktekst].t = el.value; }));
+    inn.querySelectorAll("[data-sjekkfjern]").forEach((el) => (el.onclick = () => { s.sjekkliste.splice(+el.dataset.sjekkfjern, 1); skitten = true; tegnSkjema(); }));
+    const nyS = $("#nySjekk", inn);
+    const leggTilPunkt = () => {
+      const t = nyS.value.trim();
+      if (!t) return;
+      s.sjekkliste.push({ t, ok: false });
+      skitten = true;
+      tegnSkjema();
+      $("#nySjekk", inn).focus();
+    };
+    $("#nySjekkBtn", inn).onclick = leggTilPunkt;
+    nyS.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); leggTilPunkt(); } });
+    $("#leggTilBilde", inn).onclick = () => leggTilMedia(s.bilder, 20, tegnSkjema);
+    inn.querySelectorAll("[data-fjern]").forEach((el) => (el.onclick = () => { s.bilder.splice(+el.dataset.fjern, 1); skitten = true; tegnSkjema(); }));
+    inn.querySelectorAll(".thumb img").forEach((el) => (el.onclick = () => window.open(el.src, "_blank", "noopener")));
+    $("#tilApple", inn).onclick = () => {
+      if (!s.dato) { toast("Velg en dato først."); return; }
+      const T = TYPER[s.type] || TYPER.notat;
+      lastNedIcs(`graabein-${slug(s.tittel || T.navn)}.ics`, [vevent({
+        uid: `${id}@kalender.graabe.in`, tittel: `${T.navn}: ${s.tittel || "Uten tittel"}`,
+        beskrivelse: [s.emne && "Emne: " + s.emne, s.rabattkode && "Rabattkode: " + s.rabattkode, s.tekst, s.lenke].filter(Boolean).join("\n\n"),
+        url: s.lenke || "", dato: s.dato, tid: s.tid, tilDato: s.tilDato, varselDager: s.varsel === "ingen" ? null : +s.varsel,
+      })]);
+    };
+    $("#lagInnlegg", inn).onclick = async () => {
+      if (s.bilder.some((b) => b.laster)) { toast("Vent til opplastingen er ferdig."); return; }
+      if (ny || skitten) { if (!(await lagre({ bli: true }))) return; }
+      aapne({ type: "nyPost", dato: s.dato, tid: s.tid, fra: { kalenderId: id, tekst: s.tekst, media: s.bilder.filter((b) => b.url), notat: s.tittel } });
+    };
+  }
+
+  async function lagre({ bli } = {}) {
+    if (s.bilder.some((b) => b.laster)) { toast("Vent til opplastingen er ferdig."); return false; }
+    if (!s.dato) { toast("Velg en dato."); return false; }
+    if (s.tilDato && s.tilDato < s.dato) { toast("«Til og med» må være etter startdatoen."); return false; }
+    const data = {
+      type: s.type, tittel: s.tittel.trim() || "Uten tittel", dato: s.dato, tid: s.tid || "",
+      tilDato: s.tilDato && s.tilDato > s.dato ? s.tilDato : "", status: s.status, tekst: s.tekst || "",
+      emne: s.emne || "", forhandstekst: s.forhandstekst || "", rabattkode: s.rabattkode || "", lenke: s.lenke || "",
+      sjekkliste: s.sjekkliste.filter((x) => x.t.trim()).map((x) => ({ t: x.t.trim(), ok: !!x.ok })),
+      bilder: s.bilder.filter((b) => b.url).map((b) => ({ url: b.url, type: b.type, navn: b.navn || "" })),
+      varsel: s.varsel || "ingen", slettet: false, endret: FV.serverTimestamp(),
+    };
+    try {
+      if (ny && !v.lagretEn) {
+        data.opprettet = FV.serverTimestamp();
+        data.merkedag = null;
+        await db.collection("kalender").doc(id).set(data);
+        v.lagretEn = true;
+      } else {
+        await db.collection("kalender").doc(id).update(data);
+      }
+    } catch (err) { visSkrivefeil(err); return false; }
+    skitten = false;
+    if (bli) { if (ny) { delete v.ny; v.id = id; v.tilstand = null; } return true; }
+    toast(ny ? "Lagt i kalenderen" : "Lagret");
+    ferdigLagret();
+    return true;
+  }
+
+  tegnSkjema();
+  fotMed(fot, [
+    !ny ? knapp("Slett", "fare", async () => {
+      if (!confirm("Slette denne oppføringen?")) return;
+      await db.collection("kalender").doc(id).update({ slettet: true, endret: FV.serverTimestamp() });
+      skitten = false;
+      ferdigLagret();
+      toast("Oppføringen er slettet", { angre: () => db.collection("kalender").doc(id).update({ slettet: false }) });
+    }) : null,
+  ], [
+    knapp("Avbryt", "", async () => tilbake()),
+    knapp(ny ? "Legg i kalenderen" : "Lagre", "hoved", () => lagre()),
+  ]);
+}
+
+/* ----- Merkedag ----- */
+function panelMd(v, inn, fot) {
+  const m = finnMerkedag(v.id);
+  if (!m) { tittel("Merkedag"); inn.innerHTML = `<p class="tom">Fant ikke merkedagen.</p>`; return; }
+  const ann = oppf.get(m.id);
+  const s = v.tilstand || (v.tilstand = ann && !ann.slettet
+    ? Object.assign({ status: "planlagt", sjekkliste: [], tekst: "" }, kopi(ann))
+    : { status: "planlagt", sjekkliste: MD_MAL.map((t) => ({ t, ok: false })), tekst: "" });
+  const fv = plussDager(m.start, -m.forvarsel);
+  tittel(`${m.navn} ${m.aar}`);
+  function tegnMd() {
+    const st = inn.scrollTop;
+    inn.innerHTML = `
+      <p class="p-meta">${m.start === m.slutt ? esc(storF(fmtDag(m.start))) : esc(storF(fmtPeriode(m.start, m.slutt)))} · uke ${isoUke(m.start)}</p>
+      <div class="periodekort">
+        <div class="infolinje">${IKON.bjelle}<span>Bytt forsidetopp ${esc(fmtDag(fv))} (${m.forvarsel} dager før).</span></div>
+        <div class="infolinje">${IKON.ekstern}<a href="${NETTBUTIKK}${m.lenke}" target="_blank" rel="noopener">Landingssiden: graabein-skjegg.no${esc(m.lenke)}</a></div>
+        ${(m.markorer || []).map((mk) => `<div class="infolinje">${IKON.flagg}<span>${esc(mk.navn)}: ${esc(fmtDag(mk.dato))}</span></div>`).join("")}
+      </div>
+      <div class="seksjon"><div class="rutenett"><label class="felt">Status<select id="mdStatus">${Object.entries(STATUSER).map(([k, n]) => `<option value="${k}" ${k === s.status ? "selected" : ""}>${n}</option>`).join("")}</select></label></div></div>
+      <div class="seksjon"><h3>Sjekkliste for ${m.aar}</h3>
+        <div>${s.sjekkliste.map((x, i) => `<div class="sjekk ${x.ok ? "ok" : ""}"><input type="checkbox" data-sjekk="${i}" ${x.ok ? "checked" : ""} aria-label="Ferdig"><input class="t" data-sjekktekst="${i}" value="${esc(x.t)}"><button type="button" class="knapp ikonknapp stille x" data-sjekkfjern="${i}" aria-label="Fjern punkt">${IKON.lukk}</button></div>`).join("")}</div>
+        <div class="nysjekk"><input class="inp" id="nySjekk" placeholder="Nytt punkt …" data-ikke-skitten><button type="button" class="knapp" id="nySjekkBtn">Legg til</button></div>
+      </div>
+      <div class="seksjon"><label class="felt">Notater<textarea id="mdTekst" placeholder="Ideer, tilbud, hva som funket i fjor …">${esc(s.tekst)}</textarea></label></div>
+      <div class="seksjon"><h3>Planlegg for ${esc(m.navn.toLowerCase() === "jul" ? "julen" : m.navn)}</h3>
+        <div class="leggtil-knapper">
+          <button type="button" class="lt" style="--c:var(--ig)" data-ny="post">${IKON.ig}SoMe-innlegg</button>
+          <button type="button" class="lt" style="--c:var(--t-some)" data-ny="some">${IKON.kamera}SoMe-plan</button>
+          <button type="button" class="lt" style="--c:var(--t-nyhetsbrev)" data-ny="nyhetsbrev">${IKON.brev}Nyhetsbrev</button>
+        </div>
+      </div>
+      <div class="seksjon"><button type="button" class="knapp" id="tilApple">${IKON.kalender}Legg i Apple-kalender</button>
+        <p class="hint" style="margin-top:6px">Med varsel ${esc(fmtDag(fv))} kl. 09. Vil du ha alle merkedagene hvert år, bruk «Apple-kalender» øverst.</p></div>`;
+    inn.scrollTop = st;
+    autoHoyde(inn);
+    $("#mdStatus", inn).onchange = (e) => { s.status = e.target.value; skitten = true; };
+    $("#mdTekst", inn).oninput = (e) => { s.tekst = e.target.value; };
+    inn.querySelectorAll("[data-sjekk]").forEach((el) => (el.onchange = () => { s.sjekkliste[+el.dataset.sjekk].ok = el.checked; el.closest(".sjekk").classList.toggle("ok", el.checked); skitten = true; }));
+    inn.querySelectorAll("[data-sjekktekst]").forEach((el) => (el.oninput = () => { s.sjekkliste[+el.dataset.sjekktekst].t = el.value; }));
+    inn.querySelectorAll("[data-sjekkfjern]").forEach((el) => (el.onclick = () => { s.sjekkliste.splice(+el.dataset.sjekkfjern, 1); skitten = true; tegnMd(); }));
+    const nyS = $("#nySjekk", inn);
+    const leggTil = () => { const t = nyS.value.trim(); if (!t) return; s.sjekkliste.push({ t, ok: false }); skitten = true; tegnMd(); $("#nySjekk", inn).focus(); };
+    $("#nySjekkBtn", inn).onclick = leggTil;
+    nyS.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); leggTil(); } });
+    inn.querySelectorAll("[data-ny]").forEach((b) => (b.onclick = () => {
+      const t = b.dataset.ny;
+      const dato = plussDager(m.start, -3) < idag() ? m.start : plussDager(m.start, -3);
+      if (t === "post") aapne({ type: "nyPost", dato, fra: { notat: m.navn } });
+      else aapne({ type: "oppf", ny: { type: t, dato, tittel: `${m.navn}: ${t === "nyhetsbrev" ? "nyhetsbrev" : "innlegg"}`, lenke: NETTBUTIKK + m.lenke } });
+    }));
+    $("#tilApple", inn).onclick = () => lastNedIcs(`graabein-${m.slug}-${m.aar}.ics`, [vevent({
+      uid: `${m.id}@kalender.graabe.in`, tittel: `${m.navn} (Graabein)`, beskrivelse: `Bytt forsidetopp ${fmtDag(fv)}.\nLandingsside: ${NETTBUTIKK}${m.lenke}`,
+      url: NETTBUTIKK + m.lenke, dato: m.start, tilDato: m.slutt !== m.start ? m.slutt : "", varselDager: m.forvarsel,
+    })]);
+  }
+  tegnMd();
+  fotMed(fot, [], [
+    knapp("Avbryt", "", async () => tilbake()),
+    knapp("Lagre", "hoved", async () => {
+      await db.collection("kalender").doc(m.id).set({
+        type: "kampanje", merkedag: m.slug, aar: m.aar, tittel: m.navn, dato: m.start, tilDato: m.slutt !== m.start ? m.slutt : "",
+        status: s.status, tekst: s.tekst || "", sjekkliste: s.sjekkliste.filter((x) => x.t.trim()).map((x) => ({ t: x.t.trim(), ok: !!x.ok })),
+        slettet: false, endret: FV.serverTimestamp(), ...(ann ? {} : { opprettet: FV.serverTimestamp() }),
+      }, { merge: true });
+      toast("Lagret");
+      ferdigLagret();
+    }),
+  ]);
+}
+
+/* ----- Nytt SoMe-innlegg ----- */
+function panelNyPost(v, inn, fot) {
+  tittel("Nytt SoMe-innlegg");
+  const fra = v.fra || {};
+  const s = v.tilstand || (v.tilstand = {
+    media: (fra.media || []).filter((m) => m.url && (m.type === "image" || m.type === "video")).slice(0, MAKS_MEDIA).map((m) => ({ ...m })),
+    plattformer: { facebook: true, instagram: true },
+    typer: ["feed"],
+    samme: true,
+    fbTekst: fra.tekst || "",
+    igTekst: fra.tekst || "",
+    dato: v.dato < idag() ? idag() : v.dato,
+    tid: v.tid || "19:00",
+    notat: fra.notat || "",
+    kalenderId: fra.kalenderId || null,
+    forhold: {},
+  });
+
+  function tegnNy() {
+    const klare = s.media.filter((m) => !m.laster);
+    const karusell = s.media.length > 1;
+    const harVideo = s.media.some((m) => m.type === "video");
+    const forsteVideo = s.media[0] && s.media[0].type === "video";
+    if (karusell) s.typer = ["feed"];
+    if (!forsteVideo) s.typer = s.typer.filter((t) => t !== "reel");
+    if (!s.typer.length) s.typer = ["feed"];
+    const igFeed = s.plattformer.instagram && s.typer.includes("feed");
+    const advarsler = {};
+    if (igFeed) klare.forEach((m, i) => {
+      const r = s.forhold[m.url];
+      if (r && (r < 0.8 || r > 1.91)) advarsler[i] = r < 0.8 ? "For høyt for Instagram-innlegg (maks 4:5)" : "For bredt for Instagram (maks 1,91:1)";
+    });
+    const igLengde = (s.samme ? s.fbTekst : s.igTekst).length;
+    const hashtags = ((s.samme ? s.fbTekst : s.igTekst).match(/#[\p{L}\p{N}_]+/gu) || []).length;
+    const st = inn.scrollTop;
+    inn.innerHTML = `
+      <div class="seksjon"><h3>Bilder og video</h3>
+        <div class="thumbs">${thumbsHtml(s.media, { advarsler })}${s.media.length < MAKS_MEDIA ? `<button type="button" class="leggtil" id="leggTil">${IKON.pluss}<span>${s.media.length ? "Legg til flere" : "Velg bilde eller video"}</span></button>` : ""}</div>
+        <p class="hint" style="margin-top:6px">${karusell ? `Karusell med ${s.media.length} elementer. Postes som ett innlegg.${harVideo && s.plattformer.facebook ? " <b>Facebook-karuseller kan bare ha bilder.</b>" : ""}` : "Velg 2–10 filer for å lage en karusell."}</p>
+      </div>
+      <div class="seksjon"><h3>Hvor</h3>
+        <div class="velg">
+          <button type="button" class="valg ${s.plattformer.facebook ? "paa" : ""}" data-pl="facebook">${IKON.fb}Facebook</button>
+          <button type="button" class="valg ${s.plattformer.instagram ? "paa" : ""}" data-pl="instagram">${IKON.ig}Instagram</button>
+        </div>
+      </div>
+      <div class="seksjon"><h3>Format</h3>
+        ${karusell ? `<div class="velg"><button type="button" class="valg paa" disabled>Karusell</button></div>` : `<div class="velg">
+          ${["feed", "story", "reel"].map((t) => `<button type="button" class="valg ${s.typer.includes(t) ? "paa" : ""}" data-type="${t}" ${t === "reel" && !forsteVideo ? 'disabled title="Reel krever video"' : ""}>${POST_TYPE[t]}</button>`).join("")}
+        </div><p class="hint" style="margin-top:6px">Du kan velge flere. Hvert format postes for seg.${s.typer.includes("story") ? " Story viser ikke tekst." : ""}${!forsteVideo ? " Reel krever video." : ""}</p>`}
+      </div>
+      <div class="seksjon"><h3>Tekst</h3>
+        <label class="sjekk" style="margin-bottom:8px"><input type="checkbox" id="samme" ${s.samme ? "checked" : ""}><span>Samme tekst på Facebook og Instagram</span></label>
+        <div class="stabel">
+          <label class="felt">${s.samme ? "Tekst" : "Tekst til Facebook"}<textarea id="fbTekst" placeholder="Skriv teksten …">${esc(s.fbTekst)}</textarea></label>
+          ${!s.samme ? `<label class="felt">Tekst til Instagram<textarea id="igTekst" placeholder="Skriv teksten …">${esc(s.igTekst)}</textarea></label>` : ""}
+          ${s.plattformer.instagram ? `<div class="teller ${igLengde > 2200 || hashtags > 30 ? "over" : ""}" id="igTeller">Instagram: ${igLengde}/2200 tegn · ${hashtags}/30 emneknagger</div>` : ""}
+        </div>
+      </div>
+      <div class="seksjon"><h3>Tidspunkt</h3>
+        <div class="rutenett">
+          <label class="felt">Dato<input type="date" id="pDato" value="${esc(s.dato)}" min="${idag()}"></label>
+          <label class="felt">Klokkeslett<input type="time" id="pTid" value="${esc(s.tid)}"></label>
+        </div>
+        <p class="hint" style="margin-top:6px">Postemotoren sjekker køen hvert 10. minutt, så innlegget kan komme opptil 10 minutter etter valgt tid.</p>
+      </div>
+      <div class="seksjon"><label class="felt">Internt notat (vises bare her)<input id="pNotat" value="${esc(s.notat)}" placeholder="F.eks. Farsdag – kampanje"></label></div>
+      <p class="feiltekst" id="pFeil" hidden></p>`;
+    inn.scrollTop = st;
+    autoHoyde(inn);
+    $("#leggTil", inn) && ($("#leggTil", inn).onclick = () => leggTilMedia(s.media, MAKS_MEDIA, tegnNy));
+    inn.querySelectorAll("[data-fjern]").forEach((el) => (el.onclick = () => { s.media.splice(+el.dataset.fjern, 1); skitten = true; tegnNy(); }));
+    inn.querySelectorAll(".thumb img").forEach((img) => {
+      const maal = () => {
+        if (!img.naturalWidth) return;
+        const url = img.getAttribute("src");
+        const r = img.naturalWidth / img.naturalHeight;
+        if (s.forhold[url] !== r) { s.forhold[url] = r; if (r < 0.8 || r > 1.91) tegnNy(); }
+      };
+      if (img.complete) maal(); else img.addEventListener("load", maal, { once: true });
+    });
+    inn.querySelectorAll("[data-pl]").forEach((b) => (b.onclick = () => { s.plattformer[b.dataset.pl] = !s.plattformer[b.dataset.pl]; skitten = true; tegnNy(); }));
+    inn.querySelectorAll("[data-type]").forEach((b) => (b.onclick = () => {
+      const t = b.dataset.type;
+      if (s.typer.includes(t)) { if (s.typer.length > 1) s.typer = s.typer.filter((x) => x !== t); } else s.typer.push(t);
+      skitten = true;
+      tegnNy();
+    }));
+    $("#samme", inn).onchange = (e) => { s.samme = e.target.checked; if (!s.samme && !s.igTekst) s.igTekst = s.fbTekst; skitten = true; tegnNy(); };
+    const oppdTeller = () => {
+      const el = $("#igTeller", inn);
+      if (!el) return;
+      const t = s.samme ? s.fbTekst : s.igTekst;
+      const n = (t.match(/#[\p{L}\p{N}_]+/gu) || []).length;
+      el.textContent = `Instagram: ${t.length}/2200 tegn · ${n}/30 emneknagger`;
+      el.classList.toggle("over", t.length > 2200 || n > 30);
+    };
+    $("#fbTekst", inn).oninput = (e) => { s.fbTekst = e.target.value; oppdTeller(); };
+    $("#igTekst", inn) && ($("#igTekst", inn).oninput = (e) => { s.igTekst = e.target.value; oppdTeller(); });
+    $("#pDato", inn).oninput = (e) => (s.dato = e.target.value);
+    $("#pTid", inn).oninput = (e) => (s.tid = e.target.value);
+    $("#pNotat", inn).oninput = (e) => (s.notat = e.target.value);
+  }
+
+  function valider(krevTid) {
+    const feil = (t) => { const el = $("#pFeil", inn); el.textContent = t; el.hidden = false; el.scrollIntoView({ block: "nearest", behavior: "smooth" }); return false; };
+    $("#pFeil", inn).hidden = true;
+    if (s.media.some((m) => m.laster)) return feil("Vent til opplastingen er ferdig.");
+    if (!s.media.length) return feil("Legg til minst ett bilde eller én video.");
+    if (!s.plattformer.facebook && !s.plattformer.instagram) return feil("Velg Facebook, Instagram eller begge.");
+    if (s.media.length > 1 && s.plattformer.facebook && s.media.some((m) => m.type === "video")) return feil("Facebook-karuseller kan bare ha bilder. Fjern videoen, eller slå av Facebook.");
+    if (s.typer.includes("reel") && s.media[0].type !== "video") return feil("Reel krever video.");
+    if (s.plattformer.instagram) {
+      const t = s.samme ? s.fbTekst : s.igTekst;
+      if (t.length > 2200) return feil("Instagram-teksten er for lang (maks 2200 tegn).");
+      if ((t.match(/#[\p{L}\p{N}_]+/gu) || []).length > 30) return feil("Instagram tillater maks 30 emneknagger.");
+    }
+    if (krevTid && (!s.dato || !s.tid)) return feil("Velg dato og klokkeslett.");
+    return true;
+  }
+
+  async function opprett(status, planlagt) {
+    const gruppeId = db.collection("innlegg").doc().id;
+    const opprettet = FV.serverTimestamp();
+    const karusell = s.media.length > 1;
+    const b = db.batch();
+    let n = 0;
+    for (const p of ["facebook", "instagram"]) {
+      if (!s.plattformer[p]) continue;
+      const tekst = p === "instagram" && !s.samme ? s.igTekst : s.fbTekst;
+      for (const t of karusell ? ["carousel"] : s.typer) {
+        const doc = { tekst, status, plattform: p, type: t, gruppeId, planlagtTid: planlagt ? TS.fromDate(planlagt) : null, opprettet, kilde: "kalender" };
+        if (karusell) doc.mediaItems = s.media.map((m) => ({ url: m.url, type: m.type }));
+        else { doc.mediaUrl = s.media[0].url; doc.mediaType = s.media[0].type; }
+        if (s.notat.trim()) doc.notat = s.notat.trim();
+        if (s.kalenderId) doc.kalenderId = s.kalenderId;
+        b.set(db.collection("innlegg").doc(), doc);
+        n++;
+      }
+    }
+    await b.commit();
+    return n;
+  }
+
+  tegnNy();
+  fotMed(fot, [
+    knapp("Lagre som utkast", "", async () => {
+      if (!valider(false)) return;
+      const planlagt = s.dato && s.tid ? new Date(`${s.dato}T${s.tid}`) : null;
+      await opprett("utkast", planlagt);
+      toast("Lagt i køen som utkast. Godkjenn når du er klar.");
+      ferdigLagret();
+    }),
+  ], [
+    knapp("Post nå", "", async () => {
+      if (!valider(false)) return;
+      if (!confirm("Poste dette nå? Det går ut innen ca. 10 minutter.")) return;
+      await opprett("godkjent", null);
+      toast("Postes innen ca. 10 minutter");
+      ferdigLagret();
+    }),
+    knapp("Planlegg", "hoved", async () => {
+      if (!valider(true)) return;
+      let planlagt = new Date(`${s.dato}T${s.tid}`);
+      if (planlagt < new Date(Date.now() + 60000)) {
+        if (!confirm("Tidspunktet har passert. Vil du poste med en gang i stedet?")) return;
+        planlagt = null;
+      }
+      await opprett("godkjent", planlagt);
+      toast(planlagt ? `Planlagt ${fmtDag(ymd(planlagt))} kl. ${hhmm(planlagt)}` : "Postes innen ca. 10 minutter");
+      ferdigLagret();
+    }),
+  ]);
+}
+
+/* ----- Eksisterende SoMe-innlegg ----- */
+function panelPost(v, inn, fot) {
+  const docs = gruppeDocs(v.gid);
+  if (!docs.length) { tittel("SoMe-innlegg"); inn.innerHTML = `<p class="tom">Dette innlegget finnes ikke lenger.</p>`; return; }
+  const g = postGrupper().get(v.gid);
+  tittel(`SoMe-innlegg · ${POST_STATUS[g.status]}`);
+  const aapne_ = docs.filter(({ d }) => d.status !== "postet");
+  const forste = aapne_[0] && aapne_[0].d;
+  const t0 = forste && forste.planlagtTid ? forste.planlagtTid.toDate() : null;
+  const s = { dato: t0 ? ymd(t0) : "", tid: t0 ? hhmm(t0) : "" };
+  const media = mediaFor(docs[0].d);
+  const kilde = docs[0].d.kalenderId ? oppf.get(docs[0].d.kalenderId) : null;
+  const notat = docs[0].d.notat;
+  inn.innerHTML = `
+    ${media.length ? `<div class="stor-media ${media.length > 1 ? "flere" : ""}">${media.map((m) => m.type === "video" ? `<video src="${esc(m.url)}" controls muted playsinline preload="metadata"></video>` : `<img src="${esc(m.url)}" alt="">`).join("")}</div>` : ""}
+    ${notat || kilde ? `<p class="p-meta" style="margin-top:10px">${notat ? esc(notat) : ""}${kilde && !kilde.slettet ? `${notat ? " · " : ""}Fra kalenderen: <a href="#" data-open="oppf:${esc(docs[0].d.kalenderId)}">${esc(kilde.tittel)}</a>` : ""}</p>` : ""}
+    <div class="seksjon stabel">
+      ${docs.map(({ id, d }) => {
+        const tid = tidFor(d);
+        const statusTekst = d.status === "postet" ? `Postet ${tid ? tid.toLocaleString("nb-NO", { dateStyle: "medium", timeStyle: "short" }) : ""}`
+          : d.status === "godkjent" ? (d.planlagtTid ? `Postes ${d.planlagtTid.toDate().toLocaleString("nb-NO", { dateStyle: "medium", timeStyle: "short" })}` : "Postes innen ca. 10 minutter")
+          : d.status === "feilet" ? "Feilet" : "Utkast – ikke godkjent";
+        const fbLenke = d.status === "postet" && d.plattform === "facebook" && d.postId ? `<a href="https://www.facebook.com/${esc(d.postId)}" target="_blank" rel="noopener">Se på Facebook</a>` : "";
+        const kanEndreType = d.status === "utkast" && d.type !== "carousel";
+        const erVideo = (d.mediaType || "image") === "video";
+        return `<div class="postdoc" data-doc="${id}">
+          <div class="infolinje"><span style="display:flex;gap:6px;flex-wrap:wrap"><span class="badge ${esc(d.plattform)}">${d.plattform === "facebook" ? "Facebook" : "Instagram"}</span>
+          ${kanEndreType ? `<select class="inp" data-dtype="${id}" style="width:auto;padding:2px 8px;font-size:.78rem">${["feed", "story", "reel"].map((t) => `<option value="${t}" ${t === (d.type || "feed") ? "selected" : ""} ${t === "reel" && !erVideo ? "disabled" : ""}>${POST_TYPE[t]}</option>`).join("")}</select>` : `<span class="badge">${POST_TYPE[d.type || "feed"]}${d.type === "carousel" && d.mediaItems ? ` (${d.mediaItems.length})` : ""}</span>`}
+          <span class="badge st-${esc(d.status)}">${POST_STATUS[d.status] || esc(d.status)}</span></span><span class="hint">${esc(statusTekst)}</span></div>
+          <textarea class="inp" data-dtekst="${id}" ${d.status === "postet" ? "disabled" : ""} placeholder="${d.type === "story" ? "Story viser ikke tekst" : "Tekst"}">${esc(d.tekst || "")}</textarea>
+          ${d.status === "feilet" ? `<p class="feiltekst">${esc(d.feilmelding || "Ukjent feil")}</p>` : ""}
+          ${fbLenke ? `<p class="hint">${fbLenke}</p>` : ""}
+        </div>`;
+      }).join("")}
+    </div>
+    ${aapne_.length ? `<div class="seksjon"><h3>Tidspunkt</h3><div class="rutenett">
+      <label class="felt">Dato<input type="date" id="pDato" value="${esc(s.dato)}"></label>
+      <label class="felt">Klokkeslett<input type="time" id="pTid" value="${esc(s.tid)}"></label></div>
+      <p class="hint" style="margin-top:6px">${g.status === "godkjent" ? "Godkjent: postes automatisk på dette tidspunktet." : "Tomt tidspunkt betyr «post så snart som mulig» når det godkjennes."}</p></div>` : ""}`;
+  autoHoyde(inn);
+  $("#pDato", inn) && ($("#pDato", inn).oninput = (e) => (s.dato = e.target.value));
+  $("#pTid", inn) && ($("#pTid", inn).oninput = (e) => (s.tid = e.target.value));
+
+  const planlagt = () => (s.dato && s.tid ? new Date(`${s.dato}T${s.tid}`) : null);
+  const felles = (id) => {
+    const u = {};
+    const ta = inn.querySelector(`[data-dtekst="${id}"]`);
+    if (ta) u.tekst = ta.value;
+    const ty = inn.querySelector(`[data-dtype="${id}"]`);
+    if (ty) u.type = ty.value;
+    return u;
+  };
+  async function oppdater(filter, ekstra) {
+    const b = db.batch();
+    docs.filter(({ d }) => filter(d)).forEach(({ id }) => b.update(db.collection("innlegg").doc(id), { ...felles(id), ...ekstra }));
+    await b.commit();
+  }
+  const venstre = [], hoyre = [];
+  if (aapne_.length) {
+    venstre.push(knapp("Fjern", "fare", async () => {
+      if (!confirm("Fjerne dette innlegget fra kalenderen og køen? Det blir ikke postet.")) return;
+      await oppdater((d) => d.status !== "postet", { status: "avvist" });
+      skitten = false;
+      ferdigLagret();
+      toast("Innlegget er fjernet", { angre: () => { const b = db.batch(); aapne_.forEach(({ id, d }) => b.update(db.collection("innlegg").doc(id), { status: d.status })); return b.commit(); } });
+    }));
+  }
+  if (g.status === "utkast" || g.status === "godkjent") {
+    hoyre.push(knapp("Lagre endringer", "", async () => {
+      const p = planlagt();
+      if (aapne_.some(({ d }) => d.status === "godkjent") && p && p < new Date() && !confirm("Tidspunktet har passert. Innlegget postes da med en gang. Fortsette?")) return;
+      await oppdater((d) => d.status === "utkast" || d.status === "godkjent", { planlagtTid: p ? TS.fromDate(p) : null });
+      toast("Lagret");
+      ferdigLagret();
+    }));
+  }
+  if (g.status === "godkjent") {
+    hoyre.push(knapp("Sett på vent", "", async () => {
+      await oppdater((d) => d.status === "godkjent", { status: "utkast", planlagtTid: planlagt() ? TS.fromDate(planlagt()) : null });
+      toast("Satt på vent. Det postes ikke før du godkjenner igjen.");
+      ferdigLagret();
+    }));
+  }
+  if (g.status === "utkast" || g.status === "godkjent") {
+    hoyre.push(knapp("Post nå", "", async () => {
+      if (!confirm("Poste dette nå? Det går ut innen ca. 10 minutter.")) return;
+      await oppdater((d) => d.status === "utkast" || d.status === "godkjent", { status: "godkjent", planlagtTid: null });
+      toast("Postes innen ca. 10 minutter");
+      ferdigLagret();
+    }));
+  }
+  if (g.status === "utkast") {
+    hoyre.push(knapp("Godkjenn", "bra", async () => {
+      const p = planlagt();
+      if (!p) { if (!confirm("Ingen tid er valgt. Poste så snart som mulig?")) return; }
+      else if (p < new Date() && !confirm("Tidspunktet har passert. Poste med en gang?")) return;
+      await oppdater((d) => d.status === "utkast", { status: "godkjent", planlagtTid: p && p > new Date() ? TS.fromDate(p) : null });
+      toast(p && p > new Date() ? `Godkjent. Postes ${fmtDag(ymd(p))} kl. ${hhmm(p)}.` : "Godkjent. Postes innen ca. 10 minutter.");
+      ferdigLagret();
+    }));
+  }
+  if (g.status === "feilet") {
+    hoyre.push(knapp("Prøv igjen", "hoved", async () => {
+      await oppdater((d) => d.status === "feilet", { status: "godkjent", feilmelding: null });
+      toast("Prøver igjen innen ca. 10 minutter");
+      ferdigLagret();
+    }));
+  }
+  if (venstre.length || hoyre.length) fotMed(fot, venstre, hoyre);
+}
+
+/* ----- Apple-kalender ----- */
+function panelApple(v, inn) {
+  tittel("Apple-kalender");
+  const kommende = [...oppf.entries()].filter(([, o]) => !o.slettet && !o.merkedag && o.dato >= idag() && o.varsel && o.varsel !== "ingen" && o.status !== "ferdig");
+  inn.innerHTML = `
+    <p class="hint" style="font-size:.86rem">Åpne filen på Mac eller iPhone, så spør Kalender hvilken kalender den skal legges i. Velg gjerne en egen kalender, for eksempel «Graabein».</p>
+    <div class="seksjon"><h3>Merkedagene, hvert år</h3>
+      <p class="hint">Alle de 8 merkedagene som gjentakende hendelser, med varsel kl. 09 en uke før (nyttår fem dager før), når forsidetoppen skal byttes. Siste bestillingsdag før jul er tatt med. Dette trenger du bare å gjøre én gang.</p>
+      <button type="button" class="knapp hoved" id="mdIcs" style="margin-top:10px">${IKON.kalender}Last ned merkedagene</button>
+    </div>
+    <div class="seksjon"><h3>Kommende oppføringer med varsel (${kommende.length})</h3>
+      <p class="hint">Alle oppføringer fra i dag og fremover som har varsel valgt. Du kan også legge inn én og én fra oppføringen.</p>
+      <button type="button" class="knapp" id="oppfIcs" style="margin-top:10px" ${kommende.length ? "" : "disabled"}>${IKON.kalender}Last ned ${kommende.length} oppføringer</button>
+    </div>`;
+  $("#mdIcs", inn).onclick = () => lastNedIcs("graabein-merkedager.ics", merkedagHendelser());
+  $("#oppfIcs", inn).onclick = () => lastNedIcs("graabein-kommende.ics", kommende.map(([id, o]) => {
+    const T = TYPER[o.type] || TYPER.notat;
+    return vevent({ uid: `${id}@kalender.graabe.in`, tittel: `${T.navn}: ${o.tittel}`, beskrivelse: [o.emne && "Emne: " + o.emne, o.rabattkode && "Rabattkode: " + o.rabattkode, o.tekst, o.lenke].filter(Boolean).join("\n\n"), url: o.lenke || "", dato: o.dato, tid: o.tid, tilDato: o.tilDato, varselDager: +o.varsel });
+  }));
+}
+
+/* ---------- iCalendar (.ics) ---------- */
+const slug = (t) => (t || "").toLowerCase().replace(/[æ]/g, "ae").replace(/[ø]/g, "o").replace(/[å]/g, "a").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "oppforing";
+const icsEsc = (s) => String(s || "").replace(/\\/g, "\\\\").replace(/\r?\n/g, "\\n").replace(/,/g, "\\,").replace(/;/g, "\\;");
+const utc = (d) => `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}00Z`;
+function fold(linje) {
+  const ut = [];
+  let rest = linje;
+  while (rest.length > 60) { ut.push(rest.slice(0, 60)); rest = " " + rest.slice(60); }
+  ut.push(rest);
+  return ut.join("\r\n");
+}
+function vevent({ uid, tittel, beskrivelse, url, dato, tid, tilDato, varselDager, rrule }) {
+  const l = ["BEGIN:VEVENT", `UID:${uid}`, `DTSTAMP:${utc(new Date())}`];
+  if (tid) {
+    const st = new Date(`${dato}T${tid}`);
+    l.push(`DTSTART:${utc(st)}`, `DTEND:${utc(new Date(st.getTime() + 3600000))}`);
+  } else {
+    l.push(`DTSTART;VALUE=DATE:${dato.replace(/-/g, "")}`, `DTEND;VALUE=DATE:${plussDager(tilDato && tilDato > dato ? tilDato : dato, 1).replace(/-/g, "")}`);
+  }
+  if (rrule) l.push("RRULE:" + rrule);
+  l.push("SUMMARY:" + icsEsc(tittel));
+  if (beskrivelse) l.push("DESCRIPTION:" + icsEsc(beskrivelse));
+  if (url) l.push("URL:" + url);
+  if (varselDager != null && !isNaN(varselDager)) {
+    l.push("BEGIN:VALARM", "ACTION:DISPLAY", "DESCRIPTION:" + icsEsc(tittel));
+    if (tid && !rrule) {
+      const v = fraYmd(dato);
+      v.setDate(v.getDate() - varselDager);
+      v.setHours(9, 0, 0, 0);
+      l.push(`TRIGGER;VALUE=DATE-TIME:${utc(v)}`);
+    } else {
+      const timer = varselDager * 24 - 9; // kl. 09 n dager før en heldagshendelse
+      l.push(timer > 0 ? `TRIGGER:-PT${timer}H` : `TRIGGER:PT${-timer}H`);
+    }
+    l.push("END:VALARM");
+  }
+  l.push("END:VEVENT");
+  return l.map(fold).join("\r\n");
+}
+function icsTekst(hendelser) {
+  return ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Graabein Skjegg//Markedsforingskalender//NO", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", ...hendelser, "END:VCALENDAR"].join("\r\n") + "\r\n";
+}
+function lastNedIcs(filnavn, hendelser) {
+  const a = document.createElement("a");
+  a.href = "data:text/calendar;charset=utf-8," + encodeURIComponent(icsTekst(hendelser));
+  a.download = filnavn;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => a.remove(), 500);
+}
+function merkedagHendelser() {
+  const y = new Date().getFullYear();
+  const regler = {
+    nyttar: "FREQ=YEARLY", valentinsdag: "FREQ=YEARLY", "17-mai": "FREQ=YEARLY", movember: "FREQ=YEARLY", jul: "FREQ=YEARLY",
+    "world-beard-day": "FREQ=YEARLY;BYMONTH=9;BYDAY=1SA",
+    farsdag: "FREQ=YEARLY;BYMONTH=11;BYDAY=2SU",
+    "black-week": "FREQ=YEARLY;BYMONTH=11;BYDAY=MO;BYMONTHDAY=19,20,21,22,23,24,25",
+  };
+  const ut = merkedager(y).map((m) => vevent({
+    uid: `md-${m.slug}@kalender.graabe.in`, tittel: `${m.navn} (Graabein)`,
+    beskrivelse: `Bytt forsidetopp ${m.forvarsel} dager før.\nLandingsside: ${NETTBUTIKK}${m.lenke}`,
+    url: NETTBUTIKK + m.lenke, dato: m.start, tilDato: m.slutt !== m.start ? m.slutt : "", varselDager: m.forvarsel, rrule: regler[m.slug],
+  }));
+  ut.push(vevent({ uid: "md-jul-frist@kalender.graabe.in", tittel: "Siste bestilling før jul (Graabein)", beskrivelse: `Siste dag for levering før jul.\n${NETTBUTIKK}/julegave`, url: NETTBUTIKK + "/julegave", dato: `${y}-12-16`, varselDager: 3, rrule: "FREQ=YEARLY" }));
+  return ut;
+}
+
+/* ---------- Innlogging og data ---------- */
+const loginSkjerm = $("#loginSkjerm"), appEl = $("#app");
+$("#loggInnBtn").onclick = async () => {
+  $("#loginFeil").hidden = true;
+  try {
+    await auth.signInWithEmailAndPassword($("#loginEpost").value.trim(), $("#loginPassord").value);
+  } catch (err) {
+    $("#loginFeil").textContent = "Feil e-post eller passord.";
+    $("#loginFeil").hidden = false;
+  }
+};
+$("#loginPassord").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#loggInnBtn").click(); });
+$("#loggUtBtn").onclick = () => auth.signOut();
+
+function startLyttere() {
+  stoppLyttere();
+  lyttere.push(db.collection("innlegg").onSnapshot((snap) => {
+    innlegg.clear();
+    snap.forEach((d) => innlegg.set(d.id, d.data({ serverTimestamps: "estimate" })));
+    lastet.innlegg = true;
+    tegn();
+  }, (err) => { console.error(err); visTilgangsfeil("innlegg"); }));
+  lyttere.push(db.collection("kalender").onSnapshot((snap) => {
+    oppf.clear();
+    snap.forEach((d) => oppf.set(d.id, d.data({ serverTimestamps: "estimate" })));
+    lastet.kalender = true;
+    tegn();
+  }, (err) => { console.error(err); visTilgangsfeil("kalender"); }));
+}
+function stoppLyttere() { lyttere.forEach((u) => u()); lyttere = []; }
+
+auth.onAuthStateChanged((user) => {
+  if (user) {
+    loginSkjerm.hidden = true;
+    appEl.hidden = false;
+    $("#loginPassord").value = "";
+    tegnFiltre();
+    tegn();
+    startLyttere();
+  } else {
+    stoppLyttere();
+    if (dlg.open) lukk(true);
+    appEl.hidden = true;
+    loginSkjerm.hidden = false;
+  }
+});
+let resizeTimer = null;
+let varSmal = window.innerWidth < 700;
+window.addEventListener("resize", () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    const smal = window.innerWidth < 700;
+    if (smal !== varSmal) { varSmal = smal; if (!appEl.hidden) tegn(); }
+  }, 150);
+});
+</script>
+</body>
+</html>
