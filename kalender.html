@@ -272,6 +272,12 @@
   .chip.ide, .rad.ide { border-left-style: dotted; }
   .chip.ferdig .tx, .rad.ferdig .radtittel { text-decoration: line-through; opacity: 0.6; }
   .chip.feilet { background: color-mix(in srgb, var(--p-feilet) 18%, var(--card)); }
+  .chip.postet { background: color-mix(in srgb, var(--p-postet) 22%, var(--card)); }
+  .chip.postet .tid { color: var(--p-postet); font-weight: 600; }
+  .ok { color: var(--p-postet); display: inline-flex; flex: none; }
+  .ok .ik { stroke-width: 3; }
+  .rad.postet { background: color-mix(in srgb, var(--p-postet) 13%, var(--soft)); }
+  .boks.postetboks h3 { color: var(--p-postet); }
   .pl { display: inline-flex; gap: 2px; flex: none; }
   .pl .fb { color: var(--fb); }
   .pl .ig { color: var(--ig); }
@@ -726,6 +732,7 @@ function relDag(s) {
   const n = dagerMellom(idag(), s);
   if (n === 0) return "I dag";
   if (n === 1) return "I morgen";
+  if (n === -1) return "I går";
   return storF(fmtKortDag(s));
 }
 
@@ -906,7 +913,7 @@ function postGrupper() {
     const flyttbar = x.docs.some(({ d }) => d.status === "utkast" || d.status === "godkjent");
     x.item = {
       kind: "post", label: snutt || x.typer.join(", "), tid: x.tid, farge: `var(--p-${x.status})`,
-      ikon: plattformIkoner(x.plattformer), open: `post:${x.gid}`, drag: flyttbar ? `post:${x.gid}` : null,
+      ikon: (x.status === "postet" ? `<span class="ok">${IKON.sjekk}</span>` : "") + plattformIkoner(x.plattformer), open: `post:${x.gid}`, drag: flyttbar ? `post:${x.gid}` : null,
       cls: x.status, meta: `${pltekst} · ${x.typer.join(", ")} · ${POST_STATUS[x.status]}`,
       sort: x.tid && x.tid !== "snart" ? 6 : 5, thumb: x.media[0] || null, dot: x.status === "utkast" ? "hul" : "",
     };
@@ -959,8 +966,13 @@ function byggIndeks(fra, til, alle) {
       }
     }
   }
+  // SoMe-planer som er gjort om til innlegg (koblet via kalenderId) vises ikke,
+  // så det ikke står to ganger. Fjernes innlegget, kommer planen tilbake.
+  const omgjort = new Set();
+  for (const d of innlegg.values()) if (d.kalenderId && d.status !== "avvist") omgjort.add(d.kalenderId);
   for (const [id, o] of oppf) {
     if (o.slettet || o.merkedag) continue;
+    if (o.type === "some" && omgjort.has(id)) continue;
     const T = TYPER[o.type] || TYPER.notat;
     if (!f[T.filter] || !o.dato) continue;
     const aarlig = o.gjentas === "aarlig";
@@ -1127,12 +1139,18 @@ function tegnSide() {
     const x = idx.get(d);
     if (!x) continue;
     const ps = x.perioder.filter((p) => p.start === d || (d === d0 && p.start < d0));
-    const ting = x.ting.filter((t) => !(t.kind === "post" && t.cls === "postet"));
+    const ting = x.ting;
     if (!ps.length && !ting.length) continue;
     neste += `<div class="sidedag">${esc(relDag(d))}</div><div class="rader">${ps.map((p) => radHtml(p, `${p.start < d0 ? "Pågår til " + fmtKort(p.slutt) : fmtPeriode(p.start, p.slutt)}`)).join("")}${ting.map((t) => radHtml(t)).join("")}</div>`;
   }
   const harSome = grupper.some((g) => (g.status === "godkjent" || g.status === "utkast") && g.dato >= d0 && g.dato <= plussDager(d0, 6));
   h += `<div class="boks neste"><h3>${IKON.kalender}De neste 14 dagene</h3>${neste || `<p class="hint">Ingenting planlagt de neste 14 dagene.</p>`}${!harSome && lastet.innlegg ? `<div class="dytt">Ingen SoMe-innlegg ligger i køen de neste 7 dagene. Legg inn bilder på SoMe-planene for å lage innleggene.</div>` : ""}</div>`;
+  const d7 = plussDager(d0, -6);
+  const postet = grupper.filter((g) => g.status === "postet" && g.dato >= d7 && g.dato <= d0)
+    .sort((a, b) => (b.dato + b.tid).localeCompare(a.dato + a.tid));
+  if (postet.length) {
+    h += `<div class="boks postetboks"><h3>${IKON.sjekk}Postet de siste 7 dagene (${postet.length})</h3><div class="rader">${postet.slice(0, 7).map((g) => radHtml(g.item, `${relDag(g.dato)}${g.tid ? " kl. " + g.tid : ""} · ${g.plattformer.map((p) => (p === "facebook" ? "Facebook" : "Instagram")).join(" og ")}`)).join("")}</div></div>`;
+  }
   $("#side").innerHTML = h;
 }
 
@@ -1525,7 +1543,7 @@ function panelOppf(v, inn, fot) {
           <label class="felt">Type<select data-k="type">${TYPE_REKKEFOLGE.map((t) => `<option value="${t}" ${t === s.type ? "selected" : ""}>${TYPER[t].navn}</option>`).join("")}</select></label>
           <label class="felt">Status<select data-k="status">${Object.entries(STATUSER).map(([k, n]) => `<option value="${k}" ${k === s.status ? "selected" : ""}>${n}</option>`).join("")}</select></label>
         </div>
-        ${T.hint ? `<p class="hint">${esc(T.hint)}</p>` : ""}
+        ${s.type === "some" && koblede.length ? `<p class="hint" style="color:var(--p-postet)">${IKON.sjekk.replace('class="ik"', 'class="ik" style="display:inline;vertical-align:-2px"')} Planen er gjort om til innlegg, og vises derfor ikke i kalenderen lenger. Innlegget står under SoMe nedenfor.</p>` : T.hint ? `<p class="hint">${esc(T.hint)}</p>` : ""}
         <label class="felt tittelfelt">Tittel<input data-k="tittel" value="${esc(s.tittel)}" placeholder="${s.type === "nyhetsbrev" ? "F.eks. Oktobermail – Haust" : "Hva handler det om?"}"></label>
         <div class="rutenett">
           <label class="felt">Dato<input type="date" data-k="dato" value="${esc(s.dato)}" required></label>
