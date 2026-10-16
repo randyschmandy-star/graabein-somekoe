@@ -474,6 +474,21 @@
   }
   .thumb .merk { position: absolute; left: 4px; top: 4px; background: rgba(0, 0, 0, 0.6); color: #fff; font-size: 0.62rem; padding: 1px 5px; border-radius: 4px; }
   .thumb .advarsel { position: absolute; left: 0; right: 0; bottom: 0; background: rgba(163, 64, 47, 0.92); color: #fff; font-size: 0.62rem; line-height: 1.25; padding: 3px 5px; }
+  .thumb .igmerke { position: absolute; left: 0; right: 0; bottom: 0; background: rgba(193, 53, 132, 0.92); color: #fff; font-size: 0.62rem; line-height: 1.25; padding: 3px 5px; }
+  /* Instagram-versjon (4:5 / 1,91:1) */
+  .igliste { display: flex; flex-direction: column; gap: 14px; }
+  .igkort { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
+  .igforh { width: 150px; border-radius: 8px; background: #000; display: block; flex: none; touch-action: none; cursor: grab; }
+  .igforh.bred { width: 240px; }
+  .igforh.stille { cursor: default; touch-action: auto; }
+  .igforh:active { cursor: grabbing; }
+  .igkontroll { display: flex; flex-direction: column; gap: 10px; flex: 1; min-width: 180px; }
+  .igkontroll .felt input[type="range"] { width: 100%; accent-color: var(--orange); margin: 6px 0 0; padding: 0; border: 0; background: transparent; min-height: 22px; }
+  .igkontroll .felt input[type="range"]:focus { outline: none; }
+  .igkontroll .felt input[type="range"]:focus-visible { outline: 2px solid color-mix(in srgb, var(--orange) 60%, transparent); outline-offset: 2px; }
+  .igkontroll .segment { align-self: flex-start; }
+  .segment.liten button { padding: 5px 11px; font-size: 0.8rem; }
+  .igfiks { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 0.82rem; color: var(--muted); }
   .thumb .laster { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-size: 0.8rem; background: rgba(0, 0, 0, 0.55); }
   .leggtil {
     border: 1.5px dashed var(--line);
@@ -1539,14 +1554,98 @@ async function leggTilMedia(liste, maks, rerender) {
     rerender();
   }));
 }
-function thumbsHtml(liste, { fjernbar = true, advarsler = {} } = {}) {
+function thumbsHtml(liste, { fjernbar = true, advarsler = {}, merker = {} } = {}) {
   return liste.map((m, i) => `<div class="thumb">
     ${m.laster ? `<div class="laster" data-laster="${esc(m.navn)}">${m.prosent || 0} %</div>` :
       m.type === "video" ? `<video src="${esc(m.url)}#t=0.1" muted playsinline preload="metadata"></video><span class="merk">Video</span>` :
       `<img src="${esc(m.url)}" alt="${esc(m.navn || "")}" data-i="${i}">`}
     ${fjernbar && !m.laster ? `<button type="button" class="fjern" data-fjern="${i}" aria-label="Fjern">${IKON.lukk}</button>` : ""}
-    ${advarsler[i] ? `<div class="advarsel">${esc(advarsler[i])}</div>` : ""}
+    ${advarsler[i] ? `<div class="advarsel">${esc(advarsler[i])}</div>` : merker[i] ? `<div class="igmerke">${esc(merker[i])}</div>` : ""}
   </div>`).join("");
+}
+
+/* ----- Instagram-format -----
+   Instagram godtar bare bilder mellom 4:5 (stående) og 1,91:1 (liggende) i
+   vanlige innlegg og karuseller. Bilder utenfor får en egen versjon til
+   Instagram: for høye blir 4:5, for brede blir 1,91:1. Facebook får originalen.
+   Story og video berøres ikke. */
+const IG_MIN = 0.8, IG_MAKS = 1.91;
+const igUtenfor = (r) => r < IG_MIN || r > IG_MAKS;
+const igBilder = new Map(); // url -> Promise<HTMLImageElement> (lastet med CORS, så det kan tegnes på canvas)
+function hentIgBilde(url) {
+  if (!igBilder.has(url)) {
+    igBilder.set(url, new Promise((ok, feil) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => ok(img);
+      img.onerror = () => { igBilder.delete(url); feil(new Error("Fikk ikke lastet bildet for å lage Instagram-versjonen.")); };
+      img.src = url;
+    }));
+  }
+  return igBilder.get(url);
+}
+// Tegn bildet slik at det dekker hele W×H. pos (0–1) styrer hvilket utsnitt som beholdes.
+function igDekk(x, img, W, H, pos) {
+  const w = img.naturalWidth, h = img.naturalHeight;
+  const sk = Math.max(W / w, H / h);
+  const sw = W / sk, sh = H / sk;
+  x.drawImage(img, (w - sw) * pos, (h - sh) * pos, sw, sh, 0, 0, W, H);
+}
+// Lager Instagram-versjonen på et canvas. valg = { modus: "beskjaer" | "uskarp", pos: 0–1 }.
+function tegnIg(img, valg, bredde, c) {
+  const w = img.naturalWidth, h = img.naturalHeight;
+  const hoy = w / h < IG_MIN;
+  const W = Math.round(bredde);
+  const H = hoy ? Math.floor(W / IG_MIN) : Math.ceil(W / IG_MAKS);
+  c = c || document.createElement("canvas");
+  c.width = W;
+  c.height = H;
+  const x = c.getContext("2d");
+  x.imageSmoothingEnabled = true;
+  x.imageSmoothingQuality = "high";
+  x.fillStyle = "#fff";
+  x.fillRect(0, 0, W, H);
+  const pos = Math.min(1, Math.max(0, valg && typeof valg.pos === "number" ? valg.pos : 0.5));
+  if (valg && valg.modus === "uskarp") {
+    // Bakgrunn: bildet forstørret og gjort uskarpt (tegnet lite og blåst opp i to steg, virker i alle nettlesere)
+    const a = document.createElement("canvas"), b = document.createElement("canvas");
+    a.width = 24; a.height = Math.max(1, Math.round((24 * H) / W));
+    b.width = 96; b.height = Math.max(1, Math.round((96 * H) / W));
+    igDekk(a.getContext("2d"), img, a.width, a.height, 0.5);
+    const bx = b.getContext("2d");
+    bx.imageSmoothingQuality = "high";
+    bx.drawImage(a, 0, 0, b.width, b.height);
+    x.drawImage(b, 0, 0, W, H);
+    x.fillStyle = "rgba(0, 0, 0, 0.15)";
+    x.fillRect(0, 0, W, H);
+    // Hele bildet oppå, sentrert
+    const sk = Math.min(W / w, H / h);
+    x.drawImage(img, (W - w * sk) / 2, (H - h * sk) / 2, w * sk, h * sk);
+  } else {
+    igDekk(x, img, W, H, pos);
+  }
+  return c;
+}
+// Bredde på ferdig bilde: 1080–1440 px (det Instagram viser), aldri mer enn det beskjærte utsnittet trenger.
+function igBredde(img) {
+  const w = img.naturalWidth, h = img.naturalHeight;
+  const utsnitt = w / h < IG_MIN ? w : h * IG_MAKS;
+  return Math.min(1440, Math.max(1080, Math.round(utsnitt)));
+}
+// Lager og laster opp Instagram-versjonen. Returnerer ny URL, eller null hvis bildet allerede passer.
+async function lagIgVersjon(url, valg, navn) {
+  const img = await hentIgBilde(url);
+  if (!igUtenfor(img.naturalWidth / img.naturalHeight)) return null;
+  const c = tegnIg(img, valg || { modus: "beskjaer", pos: 0.5 }, igBredde(img));
+  let blob;
+  try {
+    blob = await new Promise((ok, feil) => c.toBlob((bl) => (bl ? ok(bl) : feil(new Error("tomt bilde"))), "image/jpeg", 0.9));
+  } catch (err) {
+    throw new Error("Fikk ikke laget Instagram-versjonen av bildet (" + (err.message || err) + ").");
+  }
+  const filnavn = String(navn || "bilde").replace(/\.[a-z0-9]+$/i, "") + "-instagram.jpg";
+  const res = await lastOpp(new File([blob], filnavn, { type: "image/jpeg" }));
+  return res.url;
 }
 
 /* ----- Oppføring (nyhetsbrev, kampanje, blogg, notat, SoMe-plan) ----- */
@@ -1810,10 +1909,11 @@ function panelNyPost(v, inn, fot) {
     notat: fra.notat || "",
     kalenderId: fra.kalenderId || null,
     forhold: {},
+    ig: {}, // url -> { modus: "beskjaer" | "uskarp", pos: 0–1 } for bilder som må tilpasses Instagram
   });
+  if (!s.ig) s.ig = {};
 
   function tegnNy() {
-    const klare = s.media.filter((m) => !m.laster);
     const karusell = s.media.length > 1;
     const harVideo = s.media.some((m) => m.type === "video");
     const forsteVideo = s.media[0] && s.media[0].type === "video";
@@ -1821,19 +1921,43 @@ function panelNyPost(v, inn, fot) {
     if (!forsteVideo) s.typer = s.typer.filter((t) => t !== "reel");
     if (!s.typer.length) s.typer = ["feed"];
     const igFeed = s.plattformer.instagram && s.typer.includes("feed");
-    const advarsler = {};
-    if (igFeed) klare.forEach((m, i) => {
+    // Bilder som må få egen Instagram-versjon (for høye eller for brede)
+    const merker = {};
+    const igListe = [];
+    if (igFeed) s.media.forEach((m, i) => {
+      if (m.laster || m.type !== "image") return;
       const r = s.forhold[m.url];
-      if (r && (r < 0.8 || r > 1.91)) advarsler[i] = r < 0.8 ? "For høyt for Instagram-innlegg (maks 4:5)" : "For bredt for Instagram (maks 1,91:1)";
+      if (!r || !igUtenfor(r)) return;
+      merker[i] = r < IG_MIN ? "Instagram: tilpasses til 4:5" : "Instagram: tilpasses til 1,91:1";
+      if (!s.ig[m.url]) s.ig[m.url] = { modus: "beskjaer", pos: 0.5 };
+      igListe.push({ m, i, hoy: r < IG_MIN });
     });
     const igLengde = (s.samme ? s.fbTekst : s.igTekst).length;
     const hashtags = ((s.samme ? s.fbTekst : s.igTekst).match(/#[\p{L}\p{N}_]+/gu) || []).length;
     const st = inn.scrollTop;
     inn.innerHTML = `
       <div class="seksjon"><h3>Bilder og video</h3>
-        <div class="thumbs">${thumbsHtml(s.media, { advarsler })}${s.media.length < MAKS_MEDIA ? `<button type="button" class="leggtil" id="leggTil">${IKON.pluss}<span>${s.media.length ? "Legg til flere" : "Velg bilde eller video"}</span></button>` : ""}</div>
+        <div class="thumbs">${thumbsHtml(s.media, { merker })}${s.media.length < MAKS_MEDIA ? `<button type="button" class="leggtil" id="leggTil">${IKON.pluss}<span>${s.media.length ? "Legg til flere" : "Velg bilde eller video"}</span></button>` : ""}</div>
         <p class="hint" style="margin-top:6px">${karusell ? `Karusell med ${s.media.length} elementer. Postes som ett innlegg.${harVideo && s.plattformer.facebook ? " <b>Facebook-karuseller kan bare ha bilder.</b>" : ""}` : "Velg 2–10 filer for å lage en karusell."}</p>
       </div>
+      ${igListe.length ? `<div class="seksjon"><h3>Instagram-versjon</h3>
+        <p class="hint" style="margin-bottom:10px">Instagram godtar ikke bilder som er høyere enn 4:5 eller bredere enn 1,91:1. ${igListe.length === 1 ? "Dette bildet" : "Disse bildene"} får en egen versjon til Instagram når du lagrer. Facebook får originalen.</p>
+        <div class="igliste">${igListe.map(({ m, i, hoy }) => {
+          const valg = s.ig[m.url];
+          const beskjaer = valg.modus !== "uskarp";
+          return `<div class="igkort">
+            <canvas class="igforh ${hoy ? "" : "bred"} ${beskjaer ? "" : "stille"}" data-igc="${i}" aria-label="Forhåndsvisning av Instagram-versjonen"></canvas>
+            <div class="igkontroll">
+              <div class="segment liten" role="group" aria-label="Tilpasning">
+                <button type="button" class="${beskjaer ? "paa" : ""}" data-igmodus="beskjaer" data-igi="${i}">Beskjær</button>
+                <button type="button" class="${beskjaer ? "" : "paa"}" data-igmodus="uskarp" data-igi="${i}">Hele bildet</button>
+              </div>
+              ${beskjaer ? `<label class="felt">Flytt utsnittet ${hoy ? "opp eller ned" : "til siden"}<input type="range" min="0" max="100" step="1" value="${Math.round(valg.pos * 100)}" data-igpos="${i}"></label>
+              <p class="hint">Dra i bildet eller bruk glidebryteren.</p>` : `<p class="hint">Hele bildet vises, med en uskarp kopi av bildet ${hoy ? "på sidene" : "over og under"}.</p>`}
+            </div>
+          </div>`;
+        }).join("")}</div>
+      </div>` : ""}
       <div class="seksjon"><h3>Hvor</h3>
         <div class="velg">
           <button type="button" class="valg ${s.plattformer.facebook ? "paa" : ""}" data-pl="facebook">${IKON.fb}Facebook</button>
@@ -1896,6 +2020,62 @@ function panelNyPost(v, inn, fot) {
     $("#pDato", inn).oninput = (e) => (s.dato = e.target.value);
     $("#pTid", inn).oninput = (e) => (s.tid = e.target.value);
     $("#pNotat", inn).oninput = (e) => (s.notat = e.target.value);
+
+    // Instagram-versjon: forhåndsvisning, beskjær / hele bildet og flytting av utsnittet
+    const tegnForh = (i) => {
+      const m = s.media[i];
+      const c = inn.querySelector(`[data-igc="${i}"]`);
+      if (!m || !c) return;
+      hentIgBilde(m.url).then((img) => { if (c.isConnected) tegnIg(img, s.ig[m.url], c.classList.contains("bred") ? 480 : 300, c); }).catch(() => {
+        const kort = c.closest(".igkort");
+        if (kort && !kort.querySelector(".feiltekst")) kort.insertAdjacentHTML("beforeend", `<p class="feiltekst">Fikk ikke vist forhåndsvisningen. Instagram-versjonen lages likevel når du lagrer.</p>`);
+      });
+    };
+    igListe.forEach(({ i }) => tegnForh(i));
+    inn.querySelectorAll("[data-igmodus]").forEach((b) => (b.onclick = () => {
+      const m = s.media[+b.dataset.igi];
+      if (!m || !s.ig[m.url]) return;
+      s.ig[m.url].modus = b.dataset.igmodus;
+      skitten = true;
+      tegnNy();
+    }));
+    inn.querySelectorAll("[data-igpos]").forEach((el) => (el.oninput = () => {
+      const i = +el.dataset.igpos;
+      s.ig[s.media[i].url].pos = +el.value / 100;
+      skitten = true;
+      tegnForh(i);
+    }));
+    inn.querySelectorAll("canvas[data-igc]").forEach((c) => {
+      const i = +c.dataset.igc;
+      let start = null;
+      c.addEventListener("pointerdown", (e) => {
+        const valg = s.ig[s.media[i].url];
+        if (!valg || valg.modus === "uskarp") return;
+        start = { x: e.clientX, y: e.clientY, pos: valg.pos };
+        try { c.setPointerCapture(e.pointerId); } catch (err) {}
+        e.preventDefault();
+      });
+      c.addEventListener("pointermove", (e) => {
+        if (!start) return;
+        const m = s.media[i];
+        const r = s.forhold[m.url];
+        const rect = c.getBoundingClientRect();
+        // Andelen av bildet som vises, og hvor mye som kan flyttes på
+        const hoy = r < IG_MIN;
+        const synlig = hoy ? r / IG_MIN : IG_MAKS / r;
+        const slakk = Math.max(0.0001, 1 - synlig);
+        const flyttet = hoy ? (e.clientY - start.y) / rect.height : (e.clientX - start.x) / rect.width;
+        const valg = s.ig[m.url];
+        valg.pos = Math.min(1, Math.max(0, start.pos - (flyttet * synlig) / slakk));
+        const sl = inn.querySelector(`[data-igpos="${i}"]`);
+        if (sl) sl.value = Math.round(valg.pos * 100);
+        skitten = true;
+        tegnForh(i);
+      });
+      const slipp = () => { start = null; };
+      c.addEventListener("pointerup", slipp);
+      c.addEventListener("pointercancel", slipp);
+    });
   }
 
   function valider(krevTid) {
@@ -1915,7 +2095,31 @@ function panelNyPost(v, inn, fot) {
     return true;
   }
 
+  // Lager Instagram-versjoner av bilder som er for høye eller brede. Returnerer kart: original-URL -> ny URL.
+  async function lagIgVersjoner() {
+    const kart = new Map();
+    const karusell = s.media.length > 1;
+    if (!s.plattformer.instagram || !(karusell || s.typer.includes("feed"))) return kart;
+    const bilder = s.media.filter((m) => m.type === "image");
+    if (!bilder.length) return kart;
+    let varslet = false;
+    for (const m of bilder) {
+      let img;
+      try { img = await hentIgBilde(m.url); } catch (err) {
+        const r = s.forhold[m.url];
+        if (r && igUtenfor(r)) throw err; // vet at bildet ikke passer, men får ikke laget ny versjon
+        continue;
+      }
+      if (!igUtenfor(img.naturalWidth / img.naturalHeight)) continue;
+      if (!varslet) { toast("Lager Instagram-versjon av bildet …"); varslet = true; }
+      const ny = await lagIgVersjon(m.url, s.ig[m.url], m.navn);
+      if (ny) kart.set(m.url, ny);
+    }
+    return kart;
+  }
+
   async function opprett(status, planlagt) {
+    const igKart = await lagIgVersjoner();
     const gruppeId = db.collection("innlegg").doc().id;
     const opprettet = FV.serverTimestamp();
     const karusell = s.media.length > 1;
@@ -1926,8 +2130,12 @@ function panelNyPost(v, inn, fot) {
       const tekst = p === "instagram" && !s.samme ? s.igTekst : s.fbTekst;
       for (const t of karusell ? ["carousel"] : s.typer) {
         const doc = { tekst, status, plattform: p, type: t, gruppeId, planlagtTid: planlagt ? TS.fromDate(planlagt) : null, opprettet, kilde: "kalender" };
-        if (karusell) doc.mediaItems = s.media.map((m) => ({ url: m.url, type: m.type }));
-        else { doc.mediaUrl = s.media[0].url; doc.mediaType = s.media[0].type; }
+        // Instagram-innlegg og -karuseller får den tilpassede versjonen. Story og Facebook får originalen.
+        const brukIg = p === "instagram" && (t === "feed" || t === "carousel") && igKart.size > 0;
+        const url = (m) => (brukIg && igKart.get(m.url)) || m.url;
+        if (brukIg) doc.igTilpasset = true;
+        if (karusell) doc.mediaItems = s.media.map((m) => ({ url: url(m), type: m.type }));
+        else { doc.mediaUrl = url(s.media[0]); doc.mediaType = s.media[0].type; }
         if (s.notat.trim()) doc.notat = s.notat.trim();
         if (s.kalenderId) doc.kalenderId = s.kalenderId;
         b.set(db.collection("innlegg").doc(), doc);
@@ -2012,6 +2220,55 @@ function panelPost(v, inn, fot) {
       <label class="felt">Klokkeslett<input type="time" id="pTid" value="${esc(s.tid)}"></label></div>
       <p class="hint" style="margin-top:6px">${g.status === "godkjent" ? "Godkjent: postes automatisk på dette tidspunktet." : "Tomt tidspunkt betyr «post så snart som mulig» når det godkjennes."}</p></div>` : ""}`;
   autoHoyde(inn);
+  // Instagram-innlegg som ikke er postet ennå: tilby å tilpasse bilder som er for høye eller brede
+  docs.forEach(({ id, d }) => {
+    if (d.plattform !== "instagram" || d.status === "postet" || !["feed", "carousel", undefined].includes(d.type)) return;
+    const bilder = mediaFor(d).filter((m) => m.type === "image");
+    if (!bilder.length) return;
+    Promise.all(bilder.map((m) => hentIgBilde(m.url).then((img) => img.naturalWidth / img.naturalHeight).catch(() => null))).then((forhold) => {
+      const utenfor = forhold.filter((r) => r && igUtenfor(r));
+      const kort = inn.querySelector(`[data-doc="${id}"]`);
+      if (!utenfor.length || !kort || !kort.isConnected || kort.querySelector(".igfiks")) return;
+      const maal = utenfor.every((r) => r > IG_MAKS) ? "1,91:1" : utenfor.every((r) => r < IG_MIN) ? "4:5" : "4:5 eller 1,91:1";
+      const rad = document.createElement("div");
+      rad.className = "igfiks";
+      rad.innerHTML = `<span>${utenfor.length > 1 ? `${utenfor.length} av bildene passer` : "Bildet passer"} ikke i Instagram (må være mellom 4:5 og 1,91:1).</span>`;
+      const fiks = (modus, tekst) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "knapp";
+        b.textContent = tekst;
+        b.onclick = async () => {
+          rad.querySelectorAll("button").forEach((x) => (x.disabled = true));
+          b.textContent = "Lager Instagram-versjon …";
+          try {
+            const valg = { modus, pos: 0.5 };
+            if (d.type === "carousel" && Array.isArray(d.mediaItems)) {
+              const items = [];
+              for (const it of d.mediaItems) {
+                const ny = it.type === "image" ? await lagIgVersjon(it.url, valg, "karusell") : null;
+                items.push({ ...it, url: ny || it.url });
+              }
+              await db.collection("innlegg").doc(id).update({ mediaItems: items, igTilpasset: true });
+            } else {
+              const ny = await lagIgVersjon(d.mediaUrl || d.bildeUrl, valg, "innlegg");
+              if (ny) await db.collection("innlegg").doc(id).update({ mediaUrl: ny, igTilpasset: true });
+            }
+            rad.innerHTML = `<span style="color:var(--p-postet)">Bildet er tilpasset Instagram${d.status === "feilet" ? ". Trykk «Prøv igjen» for å poste." : "."}</span>`;
+            toast(d.status === "feilet" ? "Bildet er tilpasset. Trykk «Prøv igjen» for å poste." : "Bildet er tilpasset Instagram.");
+          } catch (err) {
+            b.textContent = tekst;
+            rad.querySelectorAll("button").forEach((x) => (x.disabled = false));
+            visSkrivefeil(err);
+          }
+        };
+        return b;
+      };
+      rad.appendChild(fiks("beskjaer", `Beskjær til ${maal}`));
+      rad.appendChild(fiks("uskarp", "Hele bildet, uskarp kant"));
+      kort.appendChild(rad);
+    });
+  });
   $("#pDato", inn) && ($("#pDato", inn).oninput = (e) => (s.dato = e.target.value));
   $("#pTid", inn) && ($("#pTid", inn).oninput = (e) => (s.tid = e.target.value));
 
