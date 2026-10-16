@@ -1522,6 +1522,7 @@ async function lastOpp(fil, paaFremdrift) {
   oppgave.on("state_changed", (s) => paaFremdrift && paaFremdrift(Math.round((s.bytesTransferred / s.totalBytes) * 100)));
   await oppgave;
   const url = await ref.getDownloadURL();
+  if (!erVideo) igFiler.set(url, fil); // så Instagram-versjonen kan lages rett fra filen
   return { url, type: erVideo ? "video" : "image", navn: fil.name };
 }
 /* Felles bildeboks: liste = array av {url,type,navn} eller {laster,prosent,navn} */
@@ -1571,29 +1572,85 @@ function thumbsHtml(liste, { fjernbar = true, advarsler = {}, merker = {} } = {}
    Story og video berøres ikke. */
 const IG_MIN = 0.8, IG_MAKS = 1.91;
 const igUtenfor = (r) => r < IG_MIN || r > IG_MAKS;
-const igBilder = new Map(); // url -> Promise<HTMLImageElement> (lastet med CORS, så det kan tegnes på canvas)
+const igBilder = new Map(); // url -> Promise<{ el, w, h }> (bildet klart til å tegnes på canvas)
+const igFiler = new Map();  // url -> File: bilder lastet opp i denne økten (leses rett fra Macen, ingen nedlasting)
+const IG_KILDE_MAKS = 2400; // store mobilbilder skaleres ned til dette (lengste side) før de tegnes
+function lesBildeelement(src) {
+  return new Promise((ok, feil) => {
+    const img = new Image();
+    img.decoding = "async";
+    img.onload = () => ok(img);
+    img.onerror = () => feil(new Error("Bildet kunne ikke leses."));
+    img.src = src;
+  });
+}
+/* Henter bildet som data (ikke via <img crossorigin>), så nettleseren ikke stopper det:
+   Safari gjenbruker ellers miniatyrbildet fra hurtigbufferen og nekter å tegne det. */
 function hentIgBilde(url) {
   if (!igBilder.has(url)) {
-    igBilder.set(url, new Promise((ok, feil) => {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.onload = () => ok(img);
-      img.onerror = () => { igBilder.delete(url); feil(new Error("Fikk ikke lastet bildet for å lage Instagram-versjonen.")); };
-      img.src = url;
-    }));
+    const p = (async () => {
+      let data = igFiler.get(url);
+      if (!data) {
+        let res;
+        const ikkeLov = /graabein-skjegg\.no/.test(url)
+          ? "Bildet ligger i mediebiblioteket i nettbutikken, og der får ikke kalenderen lese det. Fjern det og legg det til fra Macen, så kan det tilpasses."
+          : "Bildet ble lastet opp tidligere, og kalenderen får ikke lese det for å tilpasse det. Fjern det og legg det til på nytt fra Macen.";
+        try {
+          res = await fetch(url, { mode: "cors", cache: "no-store", credentials: "omit" });
+        } catch (err) {
+          const e = new Error(ikkeLov);
+          e.kode = "ingen-tilgang";
+          throw e;
+        }
+        if (!res.ok) throw new Error(`Fikk ikke hentet bildet (feil ${res.status}).`);
+        data = await res.blob();
+      }
+      const objUrl = URL.createObjectURL(data);
+      let img;
+      try { img = await lesBildeelement(objUrl); } catch (err) { URL.revokeObjectURL(objUrl); throw err; }
+      const w = img.naturalWidth, h = img.naturalHeight;
+      if (!w || !h) { URL.revokeObjectURL(objUrl); throw new Error("Bildet kunne ikke leses."); }
+      const sk = Math.min(1, IG_KILDE_MAKS / Math.max(w, h));
+      if (sk === 1) return { el: img, w, h };
+      const c = document.createElement("canvas");
+      c.width = Math.round(w * sk);
+      c.height = Math.round(h * sk);
+      const x = c.getContext("2d");
+      x.imageSmoothingEnabled = true;
+      x.imageSmoothingQuality = "high";
+      x.drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(objUrl);
+      return { el: c, w: c.width, h: c.height };
+    })();
+    p.catch(() => igBilder.delete(url));
+    igBilder.set(url, p);
   }
   return igBilder.get(url);
 }
-// Tegn bildet slik at det dekker hele W×H. pos (0–1) styrer hvilket utsnitt som beholdes.
-function igDekk(x, img, W, H, pos) {
-  const w = img.naturalWidth, h = img.naturalHeight;
-  const sk = Math.max(W / w, H / h);
-  const sw = W / sk, sh = H / sk;
-  x.drawImage(img, (w - sw) * pos, (h - sh) * pos, sw, sh, 0, 0, W, H);
+// Bare størrelsesforholdet (vanlig <img>, trenger ikke lov til å lese bildet)
+const igForhold = new Map();
+function maalForhold(url) {
+  if (!igForhold.has(url)) {
+    igForhold.set(url, new Promise((ok) => {
+      const i = new Image();
+      i.onload = () => ok(i.naturalWidth && i.naturalHeight ? i.naturalWidth / i.naturalHeight : null);
+      i.onerror = () => ok(null);
+      i.src = url;
+    }));
+  }
+  return igForhold.get(url);
+}
+// Tegn bildet (b = { el, w, h }) slik at det dekker hele W×H. pos (0–1) styrer hvilket utsnitt som beholdes.
+function igDekk(x, b, W, H, pos) {
+  const sk = Math.max(W / b.w, H / b.h);
+  const sw = Math.min(b.w, W / sk), sh = Math.min(b.h, H / sk);
+  const sx = Math.max(0, Math.min(b.w - sw, (b.w - sw) * pos));
+  const sy = Math.max(0, Math.min(b.h - sh, (b.h - sh) * pos));
+  x.drawImage(b.el, sx, sy, sw, sh, 0, 0, W, H);
 }
 // Lager Instagram-versjonen på et canvas. valg = { modus: "beskjaer" | "uskarp", pos: 0–1 }.
-function tegnIg(img, valg, bredde, c) {
-  const w = img.naturalWidth, h = img.naturalHeight;
+function tegnIg(b, valg, bredde, c) {
+  const w = b.w, h = b.h;
   const hoy = w / h < IG_MIN;
   const W = Math.round(bredde);
   const H = hoy ? Math.floor(W / IG_MIN) : Math.ceil(W / IG_MAKS);
@@ -1608,35 +1665,34 @@ function tegnIg(img, valg, bredde, c) {
   const pos = Math.min(1, Math.max(0, valg && typeof valg.pos === "number" ? valg.pos : 0.5));
   if (valg && valg.modus === "uskarp") {
     // Bakgrunn: bildet forstørret og gjort uskarpt (tegnet lite og blåst opp i to steg, virker i alle nettlesere)
-    const a = document.createElement("canvas"), b = document.createElement("canvas");
+    const a = document.createElement("canvas"), m = document.createElement("canvas");
     a.width = 24; a.height = Math.max(1, Math.round((24 * H) / W));
-    b.width = 96; b.height = Math.max(1, Math.round((96 * H) / W));
-    igDekk(a.getContext("2d"), img, a.width, a.height, 0.5);
-    const bx = b.getContext("2d");
-    bx.imageSmoothingQuality = "high";
-    bx.drawImage(a, 0, 0, b.width, b.height);
-    x.drawImage(b, 0, 0, W, H);
+    m.width = 96; m.height = Math.max(1, Math.round((96 * H) / W));
+    igDekk(a.getContext("2d"), b, a.width, a.height, 0.5);
+    const mx = m.getContext("2d");
+    mx.imageSmoothingQuality = "high";
+    mx.drawImage(a, 0, 0, m.width, m.height);
+    x.drawImage(m, 0, 0, W, H);
     x.fillStyle = "rgba(0, 0, 0, 0.15)";
     x.fillRect(0, 0, W, H);
     // Hele bildet oppå, sentrert
     const sk = Math.min(W / w, H / h);
-    x.drawImage(img, (W - w * sk) / 2, (H - h * sk) / 2, w * sk, h * sk);
+    x.drawImage(b.el, 0, 0, w, h, (W - w * sk) / 2, (H - h * sk) / 2, w * sk, h * sk);
   } else {
-    igDekk(x, img, W, H, pos);
+    igDekk(x, b, W, H, pos);
   }
   return c;
 }
 // Bredde på ferdig bilde: 1080–1440 px (det Instagram viser), aldri mer enn det beskjærte utsnittet trenger.
-function igBredde(img) {
-  const w = img.naturalWidth, h = img.naturalHeight;
-  const utsnitt = w / h < IG_MIN ? w : h * IG_MAKS;
+function igBredde(b) {
+  const utsnitt = b.w / b.h < IG_MIN ? b.w : b.h * IG_MAKS;
   return Math.min(1440, Math.max(1080, Math.round(utsnitt)));
 }
 // Lager og laster opp Instagram-versjonen. Returnerer ny URL, eller null hvis bildet allerede passer.
 async function lagIgVersjon(url, valg, navn) {
-  const img = await hentIgBilde(url);
-  if (!igUtenfor(img.naturalWidth / img.naturalHeight)) return null;
-  const c = tegnIg(img, valg || { modus: "beskjaer", pos: 0.5 }, igBredde(img));
+  const b = await hentIgBilde(url);
+  if (!igUtenfor(b.w / b.h)) return null;
+  const c = tegnIg(b, valg || { modus: "beskjaer", pos: 0.5 }, igBredde(b));
   let blob;
   try {
     blob = await new Promise((ok, feil) => c.toBlob((bl) => (bl ? ok(bl) : feil(new Error("tomt bilde"))), "image/jpeg", 0.9));
@@ -1946,7 +2002,7 @@ function panelNyPost(v, inn, fot) {
           const valg = s.ig[m.url];
           const beskjaer = valg.modus !== "uskarp";
           return `<div class="igkort">
-            <canvas class="igforh ${hoy ? "" : "bred"} ${beskjaer ? "" : "stille"}" data-igc="${i}" aria-label="Forhåndsvisning av Instagram-versjonen"></canvas>
+            <canvas class="igforh ${hoy ? "" : "bred"} ${beskjaer ? "" : "stille"}" data-igc="${i}" width="${hoy ? 300 : 480}" height="${hoy ? 375 : 252}" aria-label="Forhåndsvisning av Instagram-versjonen"></canvas>
             <div class="igkontroll">
               <div class="segment liten" role="group" aria-label="Tilpasning">
                 <button type="button" class="${beskjaer ? "paa" : ""}" data-igmodus="beskjaer" data-igi="${i}">Beskjær</button>
@@ -2026,9 +2082,10 @@ function panelNyPost(v, inn, fot) {
       const m = s.media[i];
       const c = inn.querySelector(`[data-igc="${i}"]`);
       if (!m || !c) return;
-      hentIgBilde(m.url).then((img) => { if (c.isConnected) tegnIg(img, s.ig[m.url], c.classList.contains("bred") ? 480 : 300, c); }).catch(() => {
+      hentIgBilde(m.url).then((b) => { if (c.isConnected) tegnIg(b, s.ig[m.url], c.classList.contains("bred") ? 480 : 300, c); }).catch((err) => {
+        // Kan ikke lese bildet: vis bare beskjeden i stedet for en tom forhåndsvisning
         const kort = c.closest(".igkort");
-        if (kort && !kort.querySelector(".feiltekst")) kort.insertAdjacentHTML("beforeend", `<p class="feiltekst">Fikk ikke vist forhåndsvisningen. Instagram-versjonen lages likevel når du lagrer.</p>`);
+        if (kort) kort.innerHTML = `<p class="feiltekst">«${esc(m.navn || "Bildet")}»: ${esc(err.message || err)}</p>`;
       });
     };
     igListe.forEach(({ i }) => tegnForh(i));
@@ -2104,13 +2161,13 @@ function panelNyPost(v, inn, fot) {
     if (!bilder.length) return kart;
     let varslet = false;
     for (const m of bilder) {
-      let img;
-      try { img = await hentIgBilde(m.url); } catch (err) {
+      let b;
+      try { b = await hentIgBilde(m.url); } catch (err) {
         const r = s.forhold[m.url];
-        if (r && igUtenfor(r)) throw err; // vet at bildet ikke passer, men får ikke laget ny versjon
+        if (r && igUtenfor(r)) throw new Error(`«${m.navn || "Et bilde"}» kan ikke tilpasses Instagram: ${err.message || err}`); // vet at bildet ikke passer, men får ikke laget ny versjon
         continue;
       }
-      if (!igUtenfor(img.naturalWidth / img.naturalHeight)) continue;
+      if (!igUtenfor(b.w / b.h)) continue;
       if (!varslet) { toast("Lager Instagram-versjon av bildet …"); varslet = true; }
       const ny = await lagIgVersjon(m.url, s.ig[m.url], m.navn);
       if (ny) kart.set(m.url, ny);
@@ -2225,7 +2282,7 @@ function panelPost(v, inn, fot) {
     if (d.plattform !== "instagram" || d.status === "postet" || !["feed", "carousel", undefined].includes(d.type)) return;
     const bilder = mediaFor(d).filter((m) => m.type === "image");
     if (!bilder.length) return;
-    Promise.all(bilder.map((m) => hentIgBilde(m.url).then((img) => img.naturalWidth / img.naturalHeight).catch(() => null))).then((forhold) => {
+    Promise.all(bilder.map((m) => maalForhold(m.url))).then((forhold) => {
       const utenfor = forhold.filter((r) => r && igUtenfor(r));
       const kort = inn.querySelector(`[data-doc="${id}"]`);
       if (!utenfor.length || !kort || !kort.isConnected || kort.querySelector(".igfiks")) return;
@@ -2259,7 +2316,9 @@ function panelPost(v, inn, fot) {
           } catch (err) {
             b.textContent = tekst;
             rad.querySelectorAll("button").forEach((x) => (x.disabled = false));
-            visSkrivefeil(err);
+            if (err && err.kode === "ingen-tilgang") {
+              rad.innerHTML = `<span class="feiltekst">Kalenderen får ikke lese bildet i dette innlegget. Fjern innlegget og lag det på nytt med bildet lastet opp fra Macen, så tilpasses det automatisk.</span>`;
+            } else visSkrivefeil(err);
           }
         };
         return b;
