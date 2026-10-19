@@ -18,6 +18,7 @@
     --warn: #b8862f;
     --fb: #1877f2;
     --ig: #c13584;
+    --ulvulv: #2b6f77;
   }
   * { box-sizing: border-box; }
   body {
@@ -190,6 +191,39 @@
   .badge.plattform-facebook { background: var(--fb); color: white; }
   .badge.plattform-instagram { background: var(--ig); color: white; }
   .badge.type { background: #ddd6c8; color: var(--ink); }
+  .badge.konto-graabein { background: var(--accent); color: var(--accent-ink); }
+  .badge.konto-ulvulv { background: var(--ulvulv); color: white; }
+
+  .konto-velger {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    font-size: 0.85rem;
+  }
+  .konto-velger label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 6px 12px;
+    cursor: pointer;
+    background: var(--bg);
+  }
+  .konto-velger label:has(input:checked) { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .konto-velger label.ulvulv:has(input:checked) { background: var(--ulvulv); border-color: var(--ulvulv); }
+  .konto-velger input { margin: 0; }
+  .card.konto-ulvulv { border-color: var(--ulvulv); border-width: 2px; }
+  .filter-rad {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .filter-rad .tabs { margin-bottom: 0; }
+  .filter-rad select { width: auto; }
 
   .type-velger {
     display: flex;
@@ -279,7 +313,13 @@
 <div class="uploader card">
   <div class="card-body">
     <h2>Nytt innlegg</h2>
-    <p class="hint">Velg bilde eller video fra din egen enhet – den lastes rett opp her, du trenger ikke gå via Firebase. Det opprettes ett utkast til Facebook og ett til Instagram (som «Innlegg»); du velger format og godkjenner som vanlig nedenfor. Velg flere filer (2–10) for å lage en karusell i stedet – da låses formatet til «Karusell» (kan ikke bli Story/Reel), og Facebook-karuseller kan foreløpig bare inneholde bilder, ikke video.</p>
+    <p class="hint">Velg bilde eller video fra din egen enhet – den lastes rett opp her, du trenger ikke gå via Firebase. Velg konto (Graabein eller UlvUlv) først. Det opprettes ett utkast til Facebook og ett til Instagram (som «Innlegg»); du velger format og godkjenner som vanlig nedenfor. Velg flere filer (2–10) for å lage en karusell i stedet – da låses formatet til «Karusell» (kan ikke bli Story/Reel), og Facebook-karuseller kan foreløpig bare inneholde bilder, ikke video.</p>
+
+    <div class="konto-velger" role="radiogroup" aria-label="Konto">
+      <span>Konto:</span>
+      <label class="graabein"><input type="radio" name="konto" value="graabein" checked /> Graabein</label>
+      <label class="ulvulv"><input type="radio" name="konto" value="ulvulv" /> UlvUlv</label>
+    </div>
 
     <input type="file" id="mediaInput" accept="image/*,video/*" multiple />
 
@@ -296,11 +336,18 @@
   </div>
 </div>
 
-<div class="tabs">
-  <div class="tab active" data-tab="utkast">Til godkjenning</div>
-  <div class="tab" data-tab="godkjent">I kø</div>
-  <div class="tab" data-tab="postet">Postet</div>
-  <div class="tab" data-tab="feilet">Feilet</div>
+<div class="filter-rad">
+  <div class="tabs">
+    <div class="tab active" data-tab="utkast">Til godkjenning</div>
+    <div class="tab" data-tab="godkjent">I kø</div>
+    <div class="tab" data-tab="postet">Postet</div>
+    <div class="tab" data-tab="feilet">Feilet</div>
+  </div>
+  <select id="kontoFilter" aria-label="Vis konto">
+    <option value="alle">Alle kontoer</option>
+    <option value="graabein">Bare Graabein</option>
+    <option value="ulvulv">Bare UlvUlv</option>
+  </select>
 </div>
 
 <div id="grid" class="grid"></div>
@@ -336,6 +383,14 @@
 
   let currentTab = "utkast";
   let unsubscribe = null;
+
+  // Kontoer: hvert innlegg har feltet «konto». Innlegg uten feltet er
+  // Graabein (alt som fantes før UlvUlv kom med). Postemotoren nekter å
+  // poste et innlegg med ukjent konto.
+  const KONTO_NAVN = { graabein: "Graabein", ulvulv: "UlvUlv" };
+  const kontoFor = (data) => data.konto || "graabein";
+  const kontoFilterEl = document.getElementById("kontoFilter");
+  kontoFilterEl.addEventListener("change", () => lyttPaKollen());
 
   // ---------------------------------------------------------------------
   // Innlogging: siden krever nå en Firebase-bruker. Reglene i Firestore
@@ -421,8 +476,9 @@
     const type = data.type || "feed";
     const erKarusell = type === "carousel" && Array.isArray(data.mediaItems);
 
+    const konto = kontoFor(data);
     const div = document.createElement("div");
-    div.className = "card";
+    div.className = `card konto-${konto}`;
 
     if (erKarusell) {
       const rad = document.createElement("div");
@@ -456,6 +512,10 @@
 
     const badges = document.createElement("div");
     badges.className = "badges";
+    const kontoBadge = document.createElement("span");
+    kontoBadge.className = `badge konto-${konto}`;
+    kontoBadge.textContent = KONTO_NAVN[konto] || `Ukjent konto (${konto})`;
+    badges.appendChild(kontoBadge);
     const statusBadge = document.createElement("span");
     statusBadge.className = "badge";
     statusBadge.textContent = data.status;
@@ -581,6 +641,7 @@
               tekst: textarea.value,
               status: "godkjent",
               plattform: data.plattform,
+              konto, // samme konto som utkastet – ellers ville det blitt Graabein
               type: ekstraType,
               gruppeId: data.gruppeId || id,
               planlagtTid,
@@ -651,7 +712,9 @@
       .orderBy("opprettet", "desc")
       .onSnapshot((snap) => {
         grid.innerHTML = "";
-        if (snap.empty) {
+        const filter = kontoFilterEl.value;
+        const synlige = snap.docs.filter((doc) => filter === "alle" || kontoFor(doc.data()) === filter);
+        if (!synlige.length) {
           empty.hidden = false;
           return;
         }
@@ -661,7 +724,7 @@
         // slik at de vises side ved side.
         const grupper = new Map();
         const rekkefolge = [];
-        snap.forEach((doc) => {
+        synlige.forEach((doc) => {
           const data = doc.data();
           const nokkel = data.gruppeId || doc.id;
           if (!grupper.has(nokkel)) {
@@ -734,6 +797,12 @@
 
     const fbTekst = fbTekstEl.value;
     const igTekst = sammeTekstCb.checked ? fbTekst : igTekstEl.value;
+    const kontoValg = document.querySelector('input[name="konto"]:checked');
+    const konto = kontoValg ? kontoValg.value : "graabein";
+    if (!KONTO_NAVN[konto]) {
+      settOpplastingStatus("Velg konto.", true);
+      return;
+    }
 
     opprettBtn.disabled = true;
 
@@ -769,25 +838,25 @@
         const { url: mediaUrl, type: mediaType } = opplastede[0];
         await db.collection("innlegg").add({
           mediaUrl, mediaType, tekst: fbTekst, status: "utkast",
-          plattform: "facebook", type: "feed", gruppeId, opprettet,
+          plattform: "facebook", type: "feed", gruppeId, opprettet, konto,
         });
         await db.collection("innlegg").add({
           mediaUrl, mediaType, tekst: igTekst, status: "utkast",
-          plattform: "instagram", type: "feed", gruppeId, opprettet,
+          plattform: "instagram", type: "feed", gruppeId, opprettet, konto,
         });
       } else {
         // Flere filer → karusell. Låst til type "carousel" (ikke Story/Reel).
         await db.collection("innlegg").add({
           mediaItems: opplastede, tekst: fbTekst, status: "utkast",
-          plattform: "facebook", type: "carousel", gruppeId, opprettet,
+          plattform: "facebook", type: "carousel", gruppeId, opprettet, konto,
         });
         await db.collection("innlegg").add({
           mediaItems: opplastede, tekst: igTekst, status: "utkast",
-          plattform: "instagram", type: "carousel", gruppeId, opprettet,
+          plattform: "instagram", type: "carousel", gruppeId, opprettet, konto,
         });
       }
 
-      settOpplastingStatus("Utkast opprettet! Se «Til godkjenning» under.", false);
+      settOpplastingStatus(`Utkast opprettet for ${KONTO_NAVN[konto]}! Se «Til godkjenning» under.`, false);
       mediaInput.value = "";
       fbTekstEl.value = "";
       igTekstEl.value = "";

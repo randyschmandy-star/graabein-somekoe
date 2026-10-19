@@ -20,6 +20,7 @@
     --warn: #b8862f;
     --fb: #1877f2;
     --ig: #c13584;
+    --ulvulv: #2b6f77;
     --t-some: #8a4fbf;
     --t-nyhetsbrev: #dd7019;
     --t-kampanje: #b8862f;
@@ -263,6 +264,8 @@
   .chip .tx { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; }
   .chip .tid { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 0.68rem; flex: none; }
   .chip .etter { font-size: 0.66rem; color: inherit; opacity: 0.8; flex: none; }
+  .radikon .kt { display: none; } /* raden viser kontoen i undertittelen */
+  .kt { font-size: 0.6rem; font-weight: 700; line-height: 1.4; background: var(--ulvulv); color: #fff; border-radius: 3px; padding: 0 4px; flex: none; }
   .chip .ik { width: 12px; height: 12px; }
   .chip.k-merkedag { background: var(--c); color: #fff; font-weight: 600; }
   .chip.k-markor { font-weight: 600; color: var(--c); background: color-mix(in srgb, var(--c) 9%, var(--card)); }
@@ -530,6 +533,9 @@
   .badge { display: inline-flex; align-items: center; gap: 4px; font-size: 0.7rem; padding: 2px 8px; border-radius: 999px; background: var(--soft); color: var(--muted); white-space: nowrap; }
   .badge.facebook { background: var(--fb); color: #fff; }
   .badge.instagram { background: var(--ig); color: #fff; }
+  .badge.konto-graabein { background: var(--accent); color: var(--accent-ink); }
+  .badge.konto-ulvulv { background: var(--ulvulv); color: #fff; }
+  .valg.ulvulv.paa { background: var(--ulvulv); border-color: var(--ulvulv); color: #fff; }
   .badge.st-utkast { background: color-mix(in srgb, var(--p-utkast) 20%, var(--card)); color: var(--ink); }
   .badge.st-godkjent { background: color-mix(in srgb, var(--p-godkjent) 18%, var(--card)); color: var(--p-godkjent); }
   .badge.st-postet { background: color-mix(in srgb, var(--p-postet) 18%, var(--card)); color: var(--p-postet); }
@@ -704,6 +710,19 @@ const FILTRE = {
   blogg: { navn: "Blogg/nettside", farge: "var(--t-blogg)" },
   notat: { navn: "Notater", farge: "var(--t-notat)" },
 };
+/* Kontoer: innlegg og SoMe-planer har feltet «konto». Uten feltet = Graabein
+   (alt som fantes før UlvUlv kom med). Postemotoren nekter ukjente kontoer. */
+const KONTOER = { graabein: { navn: "Graabein" }, ulvulv: { navn: "UlvUlv" } };
+const KONTO_REKKEFOLGE = ["graabein", "ulvulv"];
+const kontoFor = (d) => (d && d.konto) || "graabein";
+const kontoNavn = (k) => (KONTOER[k] ? KONTOER[k].navn : `Ukjent konto (${k})`);
+const kontoMerke = (k) => (k === "graabein" ? "" : `<span class=\"kt\">${esc(kontoNavn(k))}</span>`);
+const kontoMeta = (k) => (k === "graabein" ? "" : `${kontoNavn(k)} · `);
+const KONTO_FILTRE = {
+  "konto-graabein": { navn: "Graabein", farge: "var(--accent)" },
+  "konto-ulvulv": { navn: "UlvUlv", farge: "var(--ulvulv)" },
+};
+function kontoSynlig(f, k) { const v = f["konto-" + k]; return v === undefined ? true : !!v; }
 const POST_STATUS = { utkast: "Utkast", godkjent: "Planlagt", postet: "Postet", feilet: "Feilet" };
 const POST_TYPE = { feed: "Innlegg", story: "Story", reel: "Reel", carousel: "Karusell" };
 const MD_MAL = ["Bytt forsidetopp (en uke før)", "Sjekk landingssiden", "Nyhetsbrev", "SoMe-innlegg", "Bytt tilbake etterpå"];
@@ -881,7 +900,7 @@ let lastet = { innlegg: false, kalender: false };
 const naa = new Date();
 let aar = naa.getFullYear(), mnd = naa.getMonth();
 let visning = hentLokalt("visning", window.innerWidth < 700 ? "liste" : "maned");
-let filtre = Object.assign({ some: true, nyhetsbrev: true, kampanje: true, markering: true, blogg: true, notat: true }, hentLokalt("filtre", {}));
+let filtre = Object.assign({ some: true, nyhetsbrev: true, kampanje: true, markering: true, blogg: true, notat: true, "konto-graabein": true, "konto-ulvulv": true }, hentLokalt("filtre", {}));
 
 /* ---------- SoMe-innlegg ---------- */
 function tidFor(d) {
@@ -949,10 +968,11 @@ function postGrupper() {
     const snutt = x.tekst.split("\n")[0].slice(0, 80);
     const flyttbar = x.docs.some(({ d }) => d.status === "utkast" || d.status === "godkjent");
     x.eng = x.status === "postet" ? engSum(x.docs) : null;
+    x.konto = kontoFor(x.docs[0].d);
     x.item = {
       kind: "post", label: snutt || x.typer.join(", "), tid: x.tid, farge: `var(--p-${x.status})`,
-      ikon: (x.status === "postet" ? `<span class="ok">${IKON.sjekk}</span>` : "") + plattformIkoner(x.plattformer), open: `post:${x.gid}`, drag: flyttbar ? `post:${x.gid}` : null,
-      cls: x.status, meta: `${pltekst} · ${x.typer.join(", ")} · ${POST_STATUS[x.status]}${x.eng ? " · " + engTekst(x.eng) : ""}`,
+      ikon: kontoMerke(x.konto) + (x.status === "postet" ? `<span class="ok">${IKON.sjekk}</span>` : "") + plattformIkoner(x.plattformer), open: `post:${x.gid}`, drag: flyttbar ? `post:${x.gid}` : null,
+      konto: x.konto, cls: x.status, meta: `${kontoMeta(x.konto)}${pltekst} · ${x.typer.join(", ")} · ${POST_STATUS[x.status]}${x.eng ? " · " + engTekst(x.eng) : ""}`,
       etter: x.eng ? `♥ ${x.eng.liker}` : "",
       sort: x.tid && x.tid !== "snart" ? 6 : 5, thumb: x.media[0] || null, dot: x.status === "utkast" ? "hul" : "",
     };
@@ -962,7 +982,7 @@ function postGrupper() {
 
 /* ---------- Indeks over hva som skjer hvilken dag ---------- */
 function byggIndeks(fra, til, alle) {
-  const f = alle ? { some: 1, nyhetsbrev: 1, kampanje: 1, markering: 1, blogg: 1, notat: 1 } : filtre;
+  const f = alle ? { some: 1, nyhetsbrev: 1, kampanje: 1, markering: 1, blogg: 1, notat: 1, "konto-graabein": 1, "konto-ulvulv": 1 } : filtre;
   const idx = new Map();
   const D = (d) => { let x = idx.get(d); if (!x) idx.set(d, (x = { ting: [], perioder: [], hd: null })); return x; };
   const inn = (d) => d >= fra && d <= til;
@@ -1012,6 +1032,7 @@ function byggIndeks(fra, til, alle) {
   for (const [id, o] of oppf) {
     if (o.slettet || o.merkedag) continue;
     if (o.type === "some" && omgjort.has(id)) continue;
+    if (o.type === "some" && !kontoSynlig(f, kontoFor(o))) continue;
     const T = TYPER[o.type] || TYPER.notat;
     if (!f[T.filter] || !o.dato) continue;
     const aarlig = o.gjentas === "aarlig";
@@ -1021,9 +1042,9 @@ function byggIndeks(fra, til, alle) {
     const forekomster = aarlig ? aarligeForekomster(o, fra, til) : [{ dato: o.dato, tilDato: o.tilDato }];
     for (const fk of forekomster) {
       const item = {
-        kind: "oppf", id, label: o.tittel || "Uten tittel", farge: T.farge, ikon: IKON[T.ikon], tid: o.tid || "",
+        kind: "oppf", id, label: o.tittel || "Uten tittel", farge: T.farge, ikon: (o.type === "some" ? kontoMerke(kontoFor(o)) : "") + IKON[T.ikon], tid: o.tid || "",
         open: `oppf:${id}`, drag: `oppf:${id}${aarlig ? "|" + fk.dato : ""}`, cls: ferdig ? "ferdig" : o.status === "ide" ? "ide" : "",
-        meta: `${T.navn} · ${aarlig ? "Hvert år" : STATUSER[o.status] || "Planlagt"}${fremdrift && !aarlig ? " · " + fremdrift : ""}`,
+        meta: `${o.type === "some" ? kontoMeta(kontoFor(o)) : ""}${T.navn} · ${aarlig ? "Hvert år" : STATUSER[o.status] || "Planlagt"}${fremdrift && !aarlig ? " · " + fremdrift : ""}`,
         etter: fremdrift && !ferdig && !aarlig ? fremdrift : "", sort: o.tid ? 6 : 4,
         thumb: (o.bilder || []).find((b) => b.url) || null,
       };
@@ -1032,7 +1053,7 @@ function byggIndeks(fra, til, alle) {
       } else if (inn(fk.dato)) D(fk.dato).ting.push(item);
     }
   }
-  if (f.some) for (const g of postGrupper().values()) if (inn(g.dato)) D(g.dato).ting.push(g.item);
+  if (f.some) for (const g of postGrupper().values()) if (inn(g.dato) && kontoSynlig(f, g.konto)) D(g.dato).ting.push(g.item);
   for (const p of perioder) {
     let d = p.start < fra ? fra : p.start;
     const s = p.slutt > til ? til : p.slutt;
@@ -1200,7 +1221,7 @@ function tegnSide() {
 }
 
 function tegnFiltre() {
-  $("#filtre").innerHTML = Object.entries(FILTRE).map(([k, f]) =>
+  $("#filtre").innerHTML = [...Object.entries(FILTRE), ...Object.entries(KONTO_FILTRE)].map(([k, f]) =>
     `<button type="button" class="filter ${filtre[k] ? "" : "av"}" data-filter="${k}" style="--c:${f.farge}" aria-pressed="${!!filtre[k]}"><i></i>${f.navn}</button>`).join("");
 }
 
@@ -1712,10 +1733,10 @@ function panelOppf(v, inn, fot) {
   if (!ny && (!kilde || kilde.slettet)) { tittel("Oppføring"); inn.innerHTML = `<p class="tom">Denne oppføringen finnes ikke lenger.</p>`; return; }
   const type0 = ny ? v.ny.type : kilde.type;
   const s = v.tilstand || (v.tilstand = ny ? {
-    type: type0, tittel: v.ny.tittel || "", dato: v.ny.dato, tid: "", tilDato: "", status: "planlagt",
+    type: type0, tittel: v.ny.tittel || "", dato: v.ny.dato, tid: "", tilDato: "", status: "planlagt", konto: v.ny.konto || "graabein",
     tekst: v.ny.tekst || "", emne: "", forhandstekst: "", rabattkode: "", lenke: v.ny.lenke || "",
     sjekkliste: (TYPER[type0] || TYPER.notat).mal.map((t) => ({ t, ok: false })), bilder: [], varsel: "ingen", gjentas: "",
-  } : Object.assign({ tid: "", tilDato: "", status: "planlagt", tekst: "", emne: "", forhandstekst: "", rabattkode: "", lenke: "", sjekkliste: [], bilder: [], varsel: "ingen", gjentas: "" }, kopi(kilde)));
+  } : Object.assign({ konto: "graabein", tid: "", tilDato: "", status: "planlagt", tekst: "", emne: "", forhandstekst: "", rabattkode: "", lenke: "", sjekkliste: [], bilder: [], varsel: "ingen", gjentas: "" }, kopi(kilde)));
 
   function tegnSkjema() {
     const T = TYPER[s.type] || TYPER.notat;
@@ -1727,6 +1748,7 @@ function panelOppf(v, inn, fot) {
         <div class="rutenett">
           <label class="felt">Type<select data-k="type">${TYPE_REKKEFOLGE.map((t) => `<option value="${t}" ${t === s.type ? "selected" : ""}>${TYPER[t].navn}</option>`).join("")}</select></label>
           <label class="felt">Status<select data-k="status">${Object.entries(STATUSER).map(([k, n]) => `<option value="${k}" ${k === s.status ? "selected" : ""}>${n}</option>`).join("")}</select></label>
+          ${s.type === "some" ? `<label class="felt">Konto<select data-k="konto">${KONTO_REKKEFOLGE.map((k) => `<option value="${k}" ${k === (s.konto || "graabein") ? "selected" : ""}>${kontoNavn(k)}</option>`).join("")}</select></label>` : ""}
         </div>
         ${s.type === "some" && koblede.length ? `<p class="hint" style="color:var(--p-postet)">${IKON.sjekk.replace('class="ik"', 'class="ik" style="display:inline;vertical-align:-2px"')} Planen er gjort om til innlegg, og vises derfor ikke i kalenderen lenger. Innlegget står under SoMe nedenfor.</p>` : T.hint ? `<p class="hint">${esc(T.hint)}</p>` : ""}
         <label class="felt tittelfelt">Tittel<input data-k="tittel" value="${esc(s.tittel)}" placeholder="${s.type === "nyhetsbrev" ? "F.eks. Oktobermail – Haust" : "Hva handler det om?"}"></label>
@@ -1830,7 +1852,7 @@ function panelOppf(v, inn, fot) {
     $("#lagInnlegg", inn).onclick = async () => {
       if (s.bilder.some((b) => b.laster)) { toast("Vent til opplastingen er ferdig."); return; }
       if (ny || skitten) { if (!(await lagre({ bli: true }))) return; }
-      aapne({ type: "nyPost", dato: s.dato, tid: s.tid, fra: { kalenderId: id, tekst: s.tekst, media: s.bilder.filter((b) => b.url), notat: s.tittel } });
+      aapne({ type: "nyPost", dato: s.dato, tid: s.tid, fra: { kalenderId: id, tekst: s.tekst, media: s.bilder.filter((b) => b.url), notat: s.tittel, konto: s.type === "some" && KONTOER[s.konto] ? s.konto : "graabein" } });
     };
   }
 
@@ -1845,6 +1867,7 @@ function panelOppf(v, inn, fot) {
       sjekkliste: s.sjekkliste.filter((x) => x.t.trim()).map((x) => ({ t: x.t.trim(), ok: !!x.ok })),
       bilder: s.bilder.filter((b) => b.url).map((b) => ({ url: b.url, type: b.type, navn: b.navn || "" })),
       varsel: s.varsel || "ingen", gjentas: s.gjentas === "aarlig" ? "aarlig" : "", slettet: false, endret: FV.serverTimestamp(),
+      konto: s.type === "some" && KONTOER[s.konto] ? s.konto : "graabein",
     };
     try {
       if (ny && !v.lagretEn) {
@@ -1963,6 +1986,7 @@ function panelNyPost(v, inn, fot) {
     dato: v.dato < idag() ? idag() : v.dato,
     tid: v.tid || "19:00",
     notat: fra.notat || "",
+    konto: KONTOER[fra.konto] ? fra.konto : "graabein",
     kalenderId: fra.kalenderId || null,
     forhold: {},
     ig: {}, // url -> { modus: "beskjaer" | "uskarp", pos: 0–1 } for bilder som må tilpasses Instagram
@@ -2014,6 +2038,9 @@ function panelNyPost(v, inn, fot) {
           </div>`;
         }).join("")}</div>
       </div>` : ""}
+      <div class="seksjon"><h3>Konto</h3>
+        <div class="velg">${KONTO_REKKEFOLGE.map((k) => `<button type="button" class="valg ${k} ${s.konto === k ? "paa" : ""}" data-konto="${k}">${kontoNavn(k)}</button>`).join("")}</div>
+      </div>
       <div class="seksjon"><h3>Hvor</h3>
         <div class="velg">
           <button type="button" class="valg ${s.plattformer.facebook ? "paa" : ""}" data-pl="facebook">${IKON.fb}Facebook</button>
@@ -2055,6 +2082,7 @@ function panelNyPost(v, inn, fot) {
       };
       if (img.complete) maal(); else img.addEventListener("load", maal, { once: true });
     });
+    inn.querySelectorAll("[data-konto]").forEach((b) => (b.onclick = () => { s.konto = b.dataset.konto; skitten = true; tegnNy(); }));
     inn.querySelectorAll("[data-pl]").forEach((b) => (b.onclick = () => { s.plattformer[b.dataset.pl] = !s.plattformer[b.dataset.pl]; skitten = true; tegnNy(); }));
     inn.querySelectorAll("[data-type]").forEach((b) => (b.onclick = () => {
       const t = b.dataset.type;
@@ -2140,6 +2168,7 @@ function panelNyPost(v, inn, fot) {
     $("#pFeil", inn).hidden = true;
     if (s.media.some((m) => m.laster)) return feil("Vent til opplastingen er ferdig.");
     if (!s.media.length) return feil("Legg til minst ett bilde eller én video.");
+    if (!KONTOER[s.konto]) return feil("Velg konto (Graabein eller UlvUlv).");
     if (!s.plattformer.facebook && !s.plattformer.instagram) return feil("Velg Facebook, Instagram eller begge.");
     if (s.media.length > 1 && s.plattformer.facebook && s.media.some((m) => m.type === "video")) return feil("Facebook-karuseller kan bare ha bilder. Fjern videoen, eller slå av Facebook.");
     if (s.typer.includes("reel") && s.media[0].type !== "video") return feil("Reel krever video.");
@@ -2186,7 +2215,7 @@ function panelNyPost(v, inn, fot) {
       if (!s.plattformer[p]) continue;
       const tekst = p === "instagram" && !s.samme ? s.igTekst : s.fbTekst;
       for (const t of karusell ? ["carousel"] : s.typer) {
-        const doc = { tekst, status, plattform: p, type: t, gruppeId, planlagtTid: planlagt ? TS.fromDate(planlagt) : null, opprettet, kilde: "kalender" };
+        const doc = { tekst, status, konto: s.konto, plattform: p, type: t, gruppeId, planlagtTid: planlagt ? TS.fromDate(planlagt) : null, opprettet, kilde: "kalender" };
         // Instagram-innlegg og -karuseller får den tilpassede versjonen. Story og Facebook får originalen.
         const brukIg = p === "instagram" && (t === "feed" || t === "carousel") && igKart.size > 0;
         const url = (m) => (brukIg && igKart.get(m.url)) || m.url;
@@ -2215,7 +2244,7 @@ function panelNyPost(v, inn, fot) {
   ], [
     knapp("Post nå", "", async () => {
       if (!valider(false)) return;
-      if (!confirm("Poste dette nå? Det går ut innen ca. 10 minutter.")) return;
+      if (!confirm(`Poste dette nå på ${kontoNavn(s.konto)}? Det går ut innen ca. 10 minutter.`)) return;
       await opprett("godkjent", null);
       toast("Postes innen ca. 10 minutter");
       ferdigLagret();
@@ -2239,7 +2268,7 @@ function panelPost(v, inn, fot) {
   const docs = gruppeDocs(v.gid);
   if (!docs.length) { tittel("SoMe-innlegg"); inn.innerHTML = `<p class="tom">Dette innlegget finnes ikke lenger.</p>`; return; }
   const g = postGrupper().get(v.gid);
-  tittel(`SoMe-innlegg · ${POST_STATUS[g.status]}`);
+  tittel(`SoMe-innlegg · ${g.konto === "graabein" ? "" : kontoNavn(g.konto) + " · "}${POST_STATUS[g.status]}`);
   const aapne_ = docs.filter(({ d }) => d.status !== "postet");
   const forste = aapne_[0] && aapne_[0].d;
   const t0 = forste && forste.planlagtTid ? forste.planlagtTid.toDate() : null;
@@ -2260,7 +2289,7 @@ function panelPost(v, inn, fot) {
         const kanEndreType = d.status === "utkast" && d.type !== "carousel";
         const erVideo = (d.mediaType || "image") === "video";
         return `<div class="postdoc" data-doc="${id}">
-          <div class="infolinje"><span style="display:flex;gap:6px;flex-wrap:wrap"><span class="badge ${esc(d.plattform)}">${d.plattform === "facebook" ? "Facebook" : "Instagram"}</span>
+          <div class="infolinje"><span style="display:flex;gap:6px;flex-wrap:wrap"><span class="badge konto-${esc(kontoFor(d))}">${esc(kontoNavn(kontoFor(d)))}</span><span class="badge ${esc(d.plattform)}">${d.plattform === "facebook" ? "Facebook" : "Instagram"}</span>
           ${kanEndreType ? `<select class="inp" data-dtype="${id}" style="width:auto;padding:2px 8px;font-size:.78rem">${["feed", "story", "reel"].map((t) => `<option value="${t}" ${t === (d.type || "feed") ? "selected" : ""} ${t === "reel" && !erVideo ? "disabled" : ""}>${POST_TYPE[t]}</option>`).join("")}</select>` : `<span class="badge">${POST_TYPE[d.type || "feed"]}${d.type === "carousel" && d.mediaItems ? ` (${d.mediaItems.length})` : ""}</span>`}
           <span class="badge st-${esc(d.status)}">${POST_STATUS[d.status] || esc(d.status)}</span></span><span class="hint">${esc(statusTekst)}</span></div>
           <textarea class="inp" data-dtekst="${id}" ${d.status === "postet" ? "disabled" : ""} placeholder="${d.type === "story" ? "Story viser ikke tekst" : "Tekst"}">${esc(d.tekst || "")}</textarea>
@@ -2373,7 +2402,7 @@ function panelPost(v, inn, fot) {
   }
   if (g.status === "utkast" || g.status === "godkjent") {
     hoyre.push(knapp("Post nå", "", async () => {
-      if (!confirm("Poste dette nå? Det går ut innen ca. 10 minutter.")) return;
+      if (!confirm(`Poste dette nå på ${kontoNavn(g.konto)}? Det går ut innen ca. 10 minutter.`)) return;
       await oppdater((d) => d.status === "utkast" || d.status === "godkjent", { status: "godkjent", planlagtTid: null });
       toast("Postes innen ca. 10 minutter");
       ferdigLagret();
